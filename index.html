@@ -1534,17 +1534,23 @@ async function loadData(){
       window.__fbOnValue(window.__fbRef(window.__db,'tsvgd'),function(s){
         var fbData=s.val()||{players:{},pins:{}};
         if(!fbData.pins)fbData.pins={};
-        // Merge: keep any local players not yet in Firebase (prevents data loss on slow sync)
-        var localData = sharedData || {};
-        var localPlayers = Object.keys(localData.players||{});
-        var fbPlayers = Object.keys(fbData.players||{});
-        var missingFromFb = localPlayers.filter(function(p){ return fbPlayers.indexOf(p)<0; });
-        if(missingFromFb.length>0){
-          console.warn('Players in local but not Firebase (will merge):', missingFromFb);
-          // These exist locally but not on server — include them to avoid dropdown disappearing
-          missingFromFb.forEach(function(p){
-            fbData.players[p] = (localData.players||{})[p] || {};
-            if((localData.pins||{})[p]) fbData.pins[p] = localData.pins[p];
+        // Merge: read localStorage directly (not sharedData which is already Firebase)
+        // to rescue any players that exist locally but never made it to Firebase
+        var localRaw = null;
+        try{ localRaw = JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch(e){}
+        if(localRaw && localRaw.players){
+          var fbPlayers = Object.keys(fbData.players||{});
+          Object.keys(localRaw.players).forEach(function(p){
+            if(fbPlayers.indexOf(p) < 0){
+              console.warn('Rescuing local-only player:', p);
+              fbData.players[p] = localRaw.players[p] || {};
+              if((localRaw.pins||{})[p]) fbData.pins[p] = localRaw.pins[p];
+              // Push rescued players to Firebase immediately
+              if(window.__fbSet && window.__fbRef && window.__db){
+                window.__fbSet(window.__fbRef(window.__db,'tsvgd/players/'+p), fbData.players[p]);
+                if(fbData.pins[p]) window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins/'+p), fbData.pins[p]);
+              }
+            }
           });
         }
         sharedData=fbData;
@@ -5286,7 +5292,43 @@ function adminAddPlayer(){
     if(!sharedData.profiles[name]) sharedData.profiles[name] = {};
     sharedData.profiles[name].email = email;
   }
-  saveData();
+  // Write new player immediately to Firebase (bypass debounce to ensure sync)
+  if(window.__fbReady && window.__db && window.__fbSet && window.__fbRef){
+    var updates = {};
+    updates['players/'+name] = {};
+    updates['pins/'+name] = hashPin(pin);
+    if(!sharedData.tempPins) sharedData.tempPins = {};
+    sharedData.tempPins[name] = true;
+    updates['tempPins/'+name] = true;
+    if(email && sharedData.profiles && sharedData.profiles[name]){
+      updates['profiles/'+name] = sharedData.profiles[name];
+    }
+    // Use update (not set) to avoid wiping other data
+    window.__fbGet(window.__fbRef(window.__db,'tsvgd')).then(function(snap){
+      var current = snap.val() || {};
+      if(!current.players) current.players = {};
+      if(!current.pins) current.pins = {};
+      if(!current.tempPins) current.tempPins = {};
+      current.players[name] = {};
+      current.pins[name] = hashPin(pin);
+      current.tempPins[name] = true;
+      if(email){
+        if(!current.profiles) current.profiles = {};
+        if(!current.profiles[name]) current.profiles[name] = {};
+        current.profiles[name].email = email;
+      }
+      return window.__fbSet(window.__fbRef(window.__db,'tsvgd'), current);
+    }).then(function(){
+      console.log('Player '+name+' written directly to Firebase');
+      showToast(name+' added! Share the PIN: '+pin);
+    }).catch(function(e){
+      console.error('Firebase direct write failed:', e);
+      showToast(name+' added! (locally) Share the PIN: '+pin);
+    });
+  } else {
+    saveData();
+    showToast(name+' added! Share the PIN: '+pin);
+  }
   // Clear form
   document.getElementById('np-name').value = '';
   document.getElementById('np-pin').value = '';
@@ -5294,7 +5336,6 @@ function adminAddPlayer(){
   document.getElementById('add-player-form').style.display = 'none';
   renderAdminPlayers();
   updateCount();
-  showToast(name+' added! Share the PIN: '+pin);
 }
 
 // ── CHANGE PIN/PASSWORD FROM PROFILE ────────────────────────────────────
