@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.7.3</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.7.4</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1214,7 +1214,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.7.3</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.7.4</span></div>
   </div>
 </div>
 
@@ -1562,13 +1562,28 @@ async function loadData(){
       sharedData = fbInitial;
       if(!sharedData.pins) sharedData.pins={};
       const bar=document.getElementById('offline-bar');if(bar)bar.style.display='none';
+      // Populate dropdown immediately from fbGet result (don't wait for onValue)
+      populateNameDropdown();
+      loadTheme();
 
+      var _firstOnValue = true;
       window.__fbOnValue(window.__fbRef(window.__db,'tsvgd'),function(s){
         var fbData=s.val()||{players:{},pins:{}};
         if(!fbData.pins)fbData.pins={};
-        // Clean onValue — just accept Firebase data (rescue already done at startup)
+        // Skip first onValue fire — it's the same snapshot as fbGet above
+        if(_firstOnValue){ _firstOnValue=false; return; }
+        // Accept Firebase data — merge in any local players not yet synced
+        var currentPlayers = Object.keys(sharedData.players||{});
+        var fbPlayers = Object.keys(fbData.players||{});
+        // Never shrink: if Firebase has fewer players than we currently know about, keep ours
+        currentPlayers.forEach(function(p){
+          if(fbPlayers.indexOf(p)<0){
+            fbData.players[p] = sharedData.players[p];
+            if((sharedData.pins||{})[p]) fbData.pins[p] = sharedData.pins[p];
+          }
+        });
         sharedData=fbData;
-        // Sync latest Firebase data to localStorage so all tabs/devices stay current
+        // Sync to localStorage
         try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData)); }catch(e){}
         console.log('Firebase onValue fired, players:', Object.keys(sharedData.players||{}).length);
         populateNameDropdown();
@@ -5082,7 +5097,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.7.3';
+var APP_VERSION = 'v1.7.4';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
