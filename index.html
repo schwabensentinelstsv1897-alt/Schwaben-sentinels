@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schwaben Sentinels – v1.6.5 – Player Availability 2026</title>
+<title>Schwaben Sentinels – v1.6.6 – Player Availability 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1150,7 +1150,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.6.5</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.6.6</span></div>
   </div>
 </div>
 
@@ -4583,6 +4583,7 @@ function populateNameDropdown(){
   var dropdown = document.getElementById('name-dropdown');
   if(!dropdown) return;
   var players = Object.keys(sharedData.players||{}).sort();
+  console.log('populateNameDropdown: '+players.length+' players:', players);
   var sub = document.getElementById('name-sub');
   dropdown.innerHTML = '<option value="">-- Select your name --</option>'
     + players.map(function(p){
