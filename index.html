@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schwaben Sentinels – v1.6.1 – Player Availability 2026</title>
+<title>Schwaben Sentinels – v1.6.2 – Player Availability 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -24,12 +24,14 @@
   };
   window.__fbSet=set; window.__fbGet=get;
   window.__fbOnValue=onValue; window.__fbRef=ref;
+  window.__fbSet=set; window.__fbGet=get;
   window.__fbReady=false; window.__db=null;
   try {
     if(firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('PASTE')){
       const app=initializeApp(firebaseConfig);
       window.__db=getDatabase(app);
       window.__fbReady=true;
+      console.log('Firebase connected successfully');
     }
   } catch(e){ console.warn('Firebase init failed:',e); }
 </script>
@@ -1140,7 +1142,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.6.1</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.6.2</span></div>
   </div>
 </div>
 
