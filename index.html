@@ -3176,8 +3176,56 @@ function adminUnlockMatch(league,idx,player){
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
+var BUILT_IN_ROLES = [
+  {id:'manager',    label:'Team Manager',       emoji:'📋', perms:['schedule','sessions','friendly'], badgeClass:'manager'},
+  {id:'scorer',     label:'Scorer',             emoji:'📊', perms:['results','scoresheet'],           badgeClass:'scorer'},
+  {id:'photographer',label:'Photographer',      emoji:'📸', perms:['photos'],                         badgeClass:'photographer'},
+  {id:'fitness',    label:'Fitness Coach',      emoji:'🏋', perms:['practice','attendance'],          badgeClass:'fitness'},
+  {id:'announcer',  label:'Announcer',          emoji:'📢', perms:['notes'],                          badgeClass:'announcer'},
+  {id:'selector',   label:'Selector',           emoji:'🎯', perms:['achievements'],                   badgeClass:'selector'},
+  {id:'batting',    label:'Batting Coach',      emoji:'🏏', perms:['practice'],                       badgeClass:'coach'},
+  {id:'bowling',    label:'Bowling Coach',      emoji:'🎳', perms:['practice'],                       badgeClass:'coach'},
+  {id:'fielding',   label:'Fielding Coach',     emoji:'🧤', perms:['practice'],                       badgeClass:'coach'},
+  {id:'social',     label:'Social Media Mgr',   emoji:'📱', perms:[],                                 badgeClass:'badge-only'},
+  {id:'equipment',  label:'Equipment Manager',  emoji:'🪄', perms:[],                                 badgeClass:'badge-only'}
+];
 
+var BUILT_IN_ACHIEVEMENTS = [
+  {id:'motm',        label:'Man of the Match',         emoji:'🏆'},
+  {id:'bestbat',     label:'Best Batsman',              emoji:'👏'},
+  {id:'bestbowl',    label:'Best Bowler',               emoji:'🎯'},
+  {id:'bestfield',   label:'Best Fielder',              emoji:'🧤'},
+  {id:'fifty',       label:'Half Century 50+',          emoji:'🔶'},
+  {id:'century',     label:'Century 100+',              emoji:'🔶🔶'},
+  {id:'fifer',       label:'5-Wicket Haul',             emoji:'🔥'},
+  {id:'hattrick',    label:'Hat-trick',                 emoji:'🎓'},
+  {id:'bestcatch',   label:'Best Catch',                emoji:'🧤'},
+  {id:'runout',      label:'Run Out',                   emoji:'⚡'},
+  {id:'improved',    label:'Most Improved',             emoji:'📈'},
+  {id:'partnership', label:'Best Partnership',          emoji:'🤝'},
+  {id:'superover',   label:'Super Over Hero',           emoji:'⭐'},
+  {id:'comeback',    label:'Comeback Player',           emoji:'💪'},
+  {id:'runrate',     label:'Highest Run Rate',          emoji:'⚡'},
+  {id:'dotballs',    label:'Most Dot Balls',            emoji:'🔴'},
+  {id:'economy',     label:'Economy King',              emoji:'👑'},
+  {id:'highscore',   label:'Highest Score',             emoji:'🏅'},
+  {id:'opening',     label:'Best Opening Partnership',  emoji:'🏆'},
+  {id:'deathbowl',   label:'Best Death Bowling',        emoji:'💣'}
+];
 
+var BUILT_IN_IMPROVEMENTS = [
+  {id:'fitness',    label:'Work on fitness',                  emoji:'🏃'},
+  {id:'fielding',   label:'Improve fielding',                 emoji:'🧤'},
+  {id:'batting',    label:'Focus on batting technique',       emoji:'🥊'},
+  {id:'linelength', label:'Work on line & length',            emoji:'🎯'},
+  {id:'running',    label:'Improve running between wickets',  emoji:'🏃'},
+  {id:'catching',   label:'Improve catching',                 emoji:'🧤'},
+  {id:'comms',      label:'Communication on field',           emoji:'🗣'},
+  {id:'deathbowl',  label:'Work on death bowling',            emoji:'💣'},
+  {id:'footwork',   label:'Improve footwork',                 emoji:'👣'},
+  {id:'focus',      label:'Stay focused',                     emoji:'🧠'},
+  {id:'practice',   label:'Needs more practice',             emoji:'🏋'}
+];
 
 var PHOTO_MAX_MB = 5;
 var PHOTO_ACCEPTED = 'image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif';
@@ -4058,6 +4106,14 @@ function hasPerm(perm){
 }
 
 function canManageSchedule(){ return hasPerm('schedule') || hasPerm('results'); }
+function canCreateSession(){
+  if(adminUnlocked || currentPlayer==='__admin__') return true;
+  var admins = (sharedData.permissions||{}).admins||[];
+  if(admins.indexOf(currentPlayer)>=0) return true;
+  var creators = (sharedData.permissions||{}).canCreateSessions||[];
+  if(creators.indexOf(currentPlayer)>=0) return true;
+  return hasPerm('sessions') || hasPerm('practice') || hasPerm('schedule');
+}
 function canUploadPhotosV2(){ return adminUnlocked || currentPlayer==='__admin__' || hasPerm('photos'); }
 function canManagePracticeV2(){ return hasPerm('practice') || hasPerm('attendance'); }
 function canPostNotes(){ return hasPerm('notes'); }
