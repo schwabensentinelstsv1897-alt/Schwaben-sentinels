@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.5</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.6</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1222,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.5</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.6</span></div>
   </div>
 </div>
 
@@ -1292,7 +1292,7 @@ const MATCHES = {
 };
 
 
-const STORAGE_KEY='tsvgd-2026';
+const STORAGE_KEY='ss2026-data';
 let currentPlayer=null,currentTab='50overs',currentOvLeague='50overs',saveTimer=null;
 let sharedData={players:{},pins:{}};
 let pinBuffer='',pinFirst='';
@@ -1536,7 +1536,7 @@ async function loadData(){
   await waitForFirebase(8000); // Increase timeout for slow mobile connections
   if(window.__fbReady&&window.__db){
     try{
-      const snap=await window.__fbGet(window.__fbRef(window.__db,'tsvgd'));
+      const snap=await window.__fbGet(window.__fbRef(window.__db,'ss2026'));
       var fbInitial = snap.val()||{players:{},pins:{}};
       if(!fbInitial.pins) fbInitial.pins={};
 
@@ -1561,7 +1561,7 @@ async function loadData(){
           }
         });
         if(Object.keys(rescueUpdates).length > 0 && window.__fbUpdate){
-          window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), rescueUpdates)
+          window.__fbUpdate(window.__fbRef(window.__db,'ss2026'), rescueUpdates)
             .then(function(){ console.log('Startup rescue write OK'); })
             .catch(function(e){ console.error('Startup rescue write failed:', e); });
         }
@@ -1574,7 +1574,7 @@ async function loadData(){
       populateNameDropdown();
       loadTheme();
 
-      window.__fbOnValue(window.__fbRef(window.__db,'tsvgd'),function(s){
+      window.__fbOnValue(window.__fbRef(window.__db,'ss2026'),function(s){
         var fbData=s.val()||{players:{},pins:{}};
         if(!fbData) fbData={};
         if(!fbData.players) fbData.players={};
@@ -1638,7 +1638,7 @@ function fbWrite(path, value){
   // Strip dataURLs from value before writing (photos stay local only)
   var cleanValue = stripDataURLs(value);
 
-  return window.__fbSet(window.__fbRef(window.__db, 'tsvgd/'+path), cleanValue)
+  return window.__fbSet(window.__fbRef(window.__db, 'ss2026/'+path), cleanValue)
     .then(function(){
       console.log('fbWrite OK:', path);
     })
@@ -1686,8 +1686,8 @@ function saveData(){
       if(clean[key] !== undefined) updates[key] = clean[key];
     });
     (window.__fbUpdate
-      ? window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
-      : window.__fbSet(window.__fbRef(window.__db,'tsvgd'), clean)
+      ? window.__fbUpdate(window.__fbRef(window.__db,'ss2026'), updates)
+      : window.__fbSet(window.__fbRef(window.__db,'ss2026'), clean)
     ).then(function(){ showToast('Saved ✅'); })
      .catch(function(e){ console.error('saveData failed:', e.message); showToast('Sync error ⚠️'); });
   }, 400);
@@ -4230,7 +4230,7 @@ function runFbDiag(){
   // Test READ
   lines.push('<br><b>Testing Firebase READ...</b>');
   out.innerHTML = lines.join('<br>');
-  window.__fbGet(window.__fbRef(window.__db,'tsvgd'))
+  window.__fbGet(window.__fbRef(window.__db,'ss2026'))
     .then(function(snap){
       var fbData = snap.val();
       var fbCount = fbData ? Object.keys(fbData.players||{}).length : 0;
@@ -4250,14 +4250,14 @@ function runFbDiag(){
       var testVal = {ts: new Date().toISOString(), from: 'admin-diag'};
       var updates = {};
       updates[testKey] = testVal;
-      return window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
+      return window.__fbUpdate(window.__fbRef(window.__db,'ss2026'), updates)
         .then(function(){
           lines.push(ok + ' WRITE OK — test key written successfully');
           out.innerHTML = lines.join('<br>');
           // Clean up test key
           var cleanUpdates = {};
           cleanUpdates[testKey] = null;
-          return window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), cleanUpdates);
+          return window.__fbUpdate(window.__fbRef(window.__db,'ss2026'), cleanUpdates);
         })
         .then(function(){
           lines.push(ok + ' CLEANUP OK — test key deleted');
@@ -4270,7 +4270,7 @@ function runFbDiag(){
             if(missingPlayers.length > 0){
               var testP = missingPlayers[0];
               lines.push('<br>Testing direct write for missing player: <b>'+testP+'</b>');
-              window.__fbSet(window.__fbRef(window.__db,'tsvgd/players/'+testP), {_test:true})
+              window.__fbSet(window.__fbRef(window.__db,'ss2026/players/'+testP), {_test:true})
                 .then(function(){
                   lines.push(ok + ' Direct path write OK for '+testP+' — update() may have a path encoding issue');
                   out.innerHTML = lines.join('<br>');
@@ -4318,16 +4318,16 @@ function forceSaveAllToFirebase(){
   console.log('Force save data size (after stripping photos):', dataSize, 'chars');
   if(out) out.innerHTML += '<br><b>Force saving '+playerCount+' players (data: '+(dataSize/1024).toFixed(0)+'KB)...</b>';
 
-  window.__fbSet(window.__fbRef(window.__db,'tsvgd/players'), fbClean.players||{})
+  window.__fbSet(window.__fbRef(window.__db,'ss2026/players'), fbClean.players||{})
     .then(function(){
       console.log('Players write OK ✅');
       if(out) out.innerHTML += '<br>✅ Players written OK';
-      return window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins'), fbClean.pins||{});
+      return window.__fbSet(window.__fbRef(window.__db,'ss2026/pins'), fbClean.pins||{});
     })
     .then(function(){
       console.log('Pins write OK ✅');
       if(out) out.innerHTML += '<br>✅ Pins written OK';
-      return window.__fbSet(window.__fbRef(window.__db,'tsvgd'), fbClean);
+      return window.__fbSet(window.__fbRef(window.__db,'ss2026'), fbClean);
     })
     .then(function(){
       console.log('Full save OK ✅');
@@ -5311,7 +5311,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.8.5';
+var APP_VERSION = 'v1.8.6';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -5566,17 +5566,17 @@ function adminAddPlayer(){
   if(window.__fbReady && window.__db && window.__fbSet && window.__fbRef){
     var pinHash = hashPin(pin);
     Promise.all([
-      window.__fbSet(window.__fbRef(window.__db,'tsvgd/players/'+name), {}),
-      window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins/'+name), pinHash),
-      window.__fbSet(window.__fbRef(window.__db,'tsvgd/tempPins/'+name), true),
-      email ? window.__fbSet(window.__fbRef(window.__db,'tsvgd/profiles/'+name), {email:email}) : Promise.resolve()
+      window.__fbSet(window.__fbRef(window.__db,'ss2026/players/'+name), {}),
+      window.__fbSet(window.__fbRef(window.__db,'ss2026/pins/'+name), pinHash),
+      window.__fbSet(window.__fbRef(window.__db,'ss2026/tempPins/'+name), true),
+      email ? window.__fbSet(window.__fbRef(window.__db,'ss2026/profiles/'+name), {email:email}) : Promise.resolve()
     ]).then(function(){
         console.log('Player '+name+' written directly to Firebase ✅');
         showToast(name+' added! Share the PIN: '+pin);
         // Verify it was saved - check both path and root
         setTimeout(function(){
           // Test 1: Check specific player path
-          window.__fbGet(window.__fbRef(window.__db,'tsvgd/players/'+name))
+          window.__fbGet(window.__fbRef(window.__db,'ss2026/players/'+name))
             .then(function(snap){
               var found = snap.val() !== null;
               console.log('Verify player path tsvgd/players/'+name+':', found ? '✅ CONFIRMED' : '❌ NOT FOUND');
@@ -5590,7 +5590,7 @@ function adminAddPlayer(){
                   .then(function(s2){
                     console.log('Isolated write verify:', s2.val() ? '✅ DATA PERSISTED outside tsvgd' : '❌ Data not found even outside tsvgd');
                     // Test 3: Check total tsvgd size
-                    return window.__fbGet(window.__fbRef(window.__db,'tsvgd'));
+                    return window.__fbGet(window.__fbRef(window.__db,'ss2026'));
                   })
                   .then(function(s3){
                     var sz = JSON.stringify(s3.val()||{}).length;
@@ -6524,7 +6524,7 @@ function renderCareerStats(player){
   var vtag = document.getElementById('header-version-tag');
   if(vtag) vtag.textContent = APP_VERSION||'v1.7.0';
   try{
-    var cached = localStorage.getItem('tsvgd-2026');
+    var cached = localStorage.getItem('ss2026-data');
     if(cached){
       var data = JSON.parse(cached);
       if(data && data.players){
