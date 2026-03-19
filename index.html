@@ -1677,21 +1677,44 @@ function updateCount(){
   if(el)el.textContent=c+' player'+(c!==1?'s':'')+' registered';
 }
 
-function toggleMobileMenu(){
-  var menu=document.getElementById('mobile-tab-menu');
-  var arrow=document.querySelector('.mobile-tab-arrow');
-  var open=!menu||menu.style.display==='none'||menu.style.display==='';
-  if(menu)menu.style.display=open?'block':'none';
-  if(arrow)arrow.classList.toggle('open',open);
+function toggleMobileMenu(){ toggleMoreDrawer(); }
+function toggleMoreDrawer(){
+  var drawer=document.getElementById('mobile-more-drawer');
+  if(!drawer) return;
+  var isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open');
+  var mbtMore=document.getElementById('mbt-more');
+  if(mbtMore) mbtMore.classList.toggle('active', !isOpen);
 }
+// Close more drawer when tapping outside
+document.addEventListener('click', function(e){
+  var drawer=document.getElementById('mobile-more-drawer');
+  if(!drawer||!drawer.classList.contains('open')) return;
+  if(!e.target.closest('#mobile-more-drawer')&&!e.target.closest('#mbt-more')){
+    drawer.classList.remove('open');
+    var mbtMore=document.getElementById('mbt-more');
+    var secondaryTabs=['friendly','activity','matches','team','photos','admin'];
+    if(mbtMore && secondaryTabs.indexOf(currentTab)<0) mbtMore.classList.remove('active');
+  }
+});
 
 window.switchTab=function(tab,btn){
   currentTab=tab;
+  // Desktop tabs
   document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
   var dtab=document.getElementById('tab-'+tab);if(dtab)dtab.classList.add('active');
-  var mLabel=document.getElementById('mobile-tab-label');if(mLabel)mLabel.textContent=tabLabels[tab]||tab;
-  var menu=document.getElementById('mobile-tab-menu');if(menu)menu.style.display='none';
-  var arrow=document.querySelector('.mobile-tab-arrow');if(arrow)arrow.classList.remove('open');
+  // Mobile bottom bar — highlight correct tab
+  var primaryTabs=['50overs','t20','practice','overview'];
+  document.querySelectorAll('.mobile-bottom-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.mobile-more-item').forEach(function(b){b.classList.remove('active');});
+  if(primaryTabs.indexOf(tab)>=0){
+    var mbt=document.getElementById('mbt-'+tab);if(mbt)mbt.classList.add('active');
+  } else {
+    var mbtMore=document.getElementById('mbt-more');if(mbtMore)mbtMore.classList.add('active');
+    var mmi=document.getElementById('mmi-'+tab);if(mmi)mmi.classList.add('active');
+  }
+  // Close more drawer
+  var drawer=document.getElementById('mobile-more-drawer');if(drawer)drawer.classList.remove('open');
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   var panel=document.getElementById('panel-'+tab);if(panel)panel.classList.add('active');
   if(tab==='50overs'||tab==='t20')renderMatches(tab);
