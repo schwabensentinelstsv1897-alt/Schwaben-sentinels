@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.2</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.3</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1222,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.2</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.3</span></div>
   </div>
 </div>
 
@@ -1617,92 +1617,82 @@ function removeUndefined(obj){
 // Save queue — prevents race conditions when multiple saves happen quickly
 var _saveQueue = Promise.resolve();
 var _pendingSave = false;
-
-// Track pending path updates for granular saves
 var _pendingUpdates = {};
 
-function saveData(){
-  // Always write to localStorage immediately
-  var cleanData = removeUndefined(sharedData);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanData));
+// ─── GRANULAR FIREBASE WRITE HELPER ──────────────────────────────────────────
+// Writes a single specific path to Firebase. Never writes the whole database.
+// Also updates localStorage with latest sharedData.
+function fbWrite(path, value){
+  // Always update localStorage immediately
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
 
-  // Debounce Firebase writes
+  if(!window.__fbReady || !window.__db){
+    showToast('Saved locally ⚠️');
+    return Promise.resolve();
+  }
+
+  // Strip dataURLs from value before writing (photos stay local only)
+  var cleanValue = stripDataURLs(value);
+
+  return window.__fbSet(window.__fbRef(window.__db, 'tsvgd/'+path), cleanValue)
+    .then(function(){
+      console.log('fbWrite OK:', path);
+    })
+    .catch(function(e){
+      console.error('fbWrite FAILED:', path, e.message);
+      showToast('Sync error ⚠️');
+    });
+}
+
+// Remove base64 dataURLs from any object (recursive) before sending to Firebase
+function stripDataURLs(obj){
+  if(!obj || typeof obj !== 'object') return obj;
+  if(Array.isArray(obj)) return obj.map(stripDataURLs);
+  var clean = {};
+  Object.keys(obj).forEach(function(k){
+    if(k === 'dataURL' || k === 'photoURL') return; // skip base64 fields
+    clean[k] = stripDataURLs(obj[k]);
+  });
+  return clean;
+}
+
+// Full save — only used for bulk operations (import, restore)
+// Normal operations use fbWrite() with specific paths
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  if(!window.__fbReady || !window.__db) { showToast('Saved locally ⚠️'); return; }
   if(_pendingSave) return;
   _pendingSave = true;
-
-  _saveQueue = _saveQueue.then(function(){
-    return new Promise(function(resolve){
-      setTimeout(function(){
-        _pendingSave = false;
-        if(!window.__fbReady || !window.__db){
-          console.warn('Firebase not ready. Saved locally only.');
-          showToast('Saved locally ⚠️');
-          resolve();
-          return;
-        }
-        var clean = removeUndefined(sharedData);
-
-        // Strip photo dataURLs before Firebase write — they are too large (base64 images)
-        // Photos are stored in localStorage for local device display only
-        // Firebase only stores photo metadata (caption, uploader, date) without the image data
-        var cleanForFirebase = JSON.parse(JSON.stringify(clean));
-        if(cleanForFirebase.photos){
-          Object.keys(cleanForFirebase.photos).forEach(function(album){
-            Object.keys(cleanForFirebase.photos[album]||{}).forEach(function(pid){
-              if(cleanForFirebase.photos[album][pid]){
-                delete cleanForFirebase.photos[album][pid].dataURL; // Remove base64 image
-              }
-            });
-          });
-        }
-        // Also strip profile photoURLs (avatars stored as base64)
-        if(cleanForFirebase.profiles){
-          Object.keys(cleanForFirebase.profiles).forEach(function(p){
-            if(cleanForFirebase.profiles[p] && cleanForFirebase.profiles[p].photoURL){
-              delete cleanForFirebase.profiles[p].photoURL;
-            }
-          });
-        }
-
-        // Build truly granular update paths to avoid cross-device conflicts.
-        var updates = {};
-        // Per-player granular paths
-        Object.keys(cleanForFirebase.players||{}).forEach(function(p){
-          updates['players/'+p] = cleanForFirebase.players[p];
-        });
-        Object.keys(cleanForFirebase.pins||{}).forEach(function(p){
-          updates['pins/'+p] = cleanForFirebase.pins[p];
-        });
-        // Bulk keys that don't conflict across devices
-        ['profiles','settings','practice','friendly','photos',
-         'matchSummaries','achievements','improvements','permissions','playerRoles',
-         'seasons','schedule','lateCancellations','lastEdits','tempPins',
-         'customRoles','customAchievements','customImprovements','grounds',
-         'adminUnlocks','authType'].forEach(function(key){
-          if(cleanForFirebase[key] !== undefined) updates[key] = cleanForFirebase[key];
-        });
-
-        var fbSize = JSON.stringify(updates).length;
-        console.log('Firebase write size:', fbSize, 'chars', fbSize > 900000 ? '⚠️ LARGE' : '✅ OK');
-
-        var doSave = window.__fbUpdate
-          ? window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
-          : window.__fbSet(window.__fbRef(window.__db,'tsvgd'), clean);
-
-        doSave
-          .then(function(){
-            showToast('Saved ✅');
-            console.log('Firebase save OK, players:', Object.keys(clean.players||{}).length);
-          })
-          .catch(function(e){
-            console.error('Firebase save failed:', e);
-            showToast('Saved locally only ⚠️');
-          })
-          .finally(resolve);
-      }, 400);
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function(){
+    _pendingSave = false;
+    var clean = stripDataURLs(removeUndefined(sharedData));
+    var size = JSON.stringify(clean).length;
+    if(size > 900000){
+      console.warn('saveData: data too large for Firebase ('+Math.round(size/1024)+'KB), use fbWrite() instead');
+      showToast('Data too large — use specific saves');
+      return;
+    }
+    var updates = {};
+    ['players','pins','profiles','settings','practice','friendly',
+     'matchSummaries','achievements','improvements','permissions','playerRoles',
+     'seasons','schedule','lateCancellations','lastEdits','tempPins',
+     'customRoles','customAchievements','customImprovements','grounds',
+     'adminUnlocks','authType'].forEach(function(key){
+      if(clean[key] !== undefined) updates[key] = clean[key];
     });
-  });
+    (window.__fbUpdate
+      ? window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
+      : window.__fbSet(window.__fbRef(window.__db,'tsvgd'), clean)
+    ).then(function(){ showToast('Saved ✅'); })
+     .catch(function(e){ console.error('saveData failed:', e.message); showToast('Sync error ⚠️'); });
+  }, 400);
 }
+var _saveTimer = null;
+
+
+// Legacy saveData preserved for bulk ops
+// saveData_LEGACY removed — use fbWrite() for targeted writes
 
 function deepMerge(base, override){
   if(!base || typeof base !== 'object') return override;
@@ -1747,7 +1737,8 @@ function saveSettings(){
   updateInstagramLink();
   if(!sharedData.seasons) sharedData.seasons=['2026'];
   if(sharedData.seasons.indexOf(activeSeason)<0) sharedData.seasons.push(activeSeason);
-  saveData();showToast('Settings saved!');
+  fbWrite('settings', sharedData.settings);
+  showToast('Settings saved!');
 }
 
 function refreshDefaultGroundDropdown(){
@@ -1914,7 +1905,9 @@ function onConfirmPinDigit(){
       if(!sharedData.pins)sharedData.pins={};
       sharedData.pins[currentPlayer]=hashPin(pinBuffer);
       if(!sharedData.players[currentPlayer])sharedData.players[currentPlayer]={};
-      saveData();loginSuccess();
+      fbWrite('pins/'+currentPlayer, sharedData.pins[currentPlayer]);
+      fbWrite('players/'+currentPlayer, sharedData.players[currentPlayer]);
+      loginSuccess();
     }
   }
 }
@@ -2170,7 +2163,8 @@ function setStatus(league,idx,status){
   sharedData.players[currentPlayer][key]=Object.assign({},sharedData.players[currentPlayer][key]||{},{status:status,lastEdit:now});
   if(!sharedData.lastEdits)sharedData.lastEdits={};
   sharedData.lastEdits[currentPlayer]=now;
-  saveData();
+  fbWrite('players/'+currentPlayer, sharedData.players[currentPlayer]);
+  fbWrite('lastEdits/'+currentPlayer, now);
 
   var cardEl=document.getElementById('card-'+league+'-'+idx);
   if(cardEl) cardEl.replaceWith(buildCard(league,idx,match,null));
@@ -2183,7 +2177,9 @@ function setField(league,idx,field,value){
   var curr=sharedData.players[currentPlayer][key]||{};
   curr[field]=value;curr.lastEdit=new Date().toISOString();
   sharedData.players[currentPlayer][key]=curr;
-  clearTimeout(saveTimer);saveTimer=setTimeout(saveData,800);
+  clearTimeout(saveTimer);saveTimer=setTimeout(function(){
+    fbWrite('players/'+currentPlayer, sharedData.players[currentPlayer]);
+  },800);
 }
 
 function switchOvLeague(league){
@@ -2574,7 +2570,7 @@ function saveGround(editIdx){
   } else {
     sharedData.grounds.push(ground);
   }
-  saveData();
+  fbWrite('grounds', sharedData.grounds);
   hideGroundForm();
   renderGroundsAdmin();
   refreshDefaultGroundDropdown();
@@ -2584,7 +2580,7 @@ function saveGround(editIdx){
 function deleteGround(idx){
   if(!confirm('Delete this ground?')) return;
   sharedData.grounds.splice(idx, 1);
-  saveData();
+  fbWrite('grounds', sharedData.grounds);
   renderGroundsAdmin();
   refreshDefaultGroundDropdown();
   showToast('Ground deleted.');
@@ -2926,12 +2922,15 @@ function savePracticeSession(){
   if(!sharedData.practice)sharedData.practice={};
   var id='ps_'+Date.now();
   sharedData.practice[id]={id:id,date:date,time:time,type:type,location:location,mapLink:mapLink,notes:notes,createdBy:currentPlayer};
-  saveData();
+  fbWrite('practice/'+id, sharedData.practice[id]);
   document.getElementById('practice-form-container').innerHTML='';
   var d=new Date(date);practiceMonth=d.getMonth();practiceYear=d.getFullYear();
   renderPractice();showToast('Session saved!');
 }
-function deleteSession(sid){if(!confirm('Delete this session?'))return;if(sharedData.practice)delete sharedData.practice[sid];saveData();renderPractice();}
+function deleteSession(sid){if(!confirm('Delete this session?'))return;if(sharedData.practice)delete sharedData.practice[sid];
+  fbWrite('practice/'+sid, null);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderPractice();}
 function setPracticeStatus(sid,status){
   if(!sharedData.practice||!sharedData.practice[sid])return;
   if(isPracticeLocked(sharedData.practice[sid].date)){showToast('Locked - less than 24 hours until session.');return;}
@@ -2941,7 +2940,10 @@ function setPracticeStatus(sid,status){
   sharedData.practice[sid].responses[currentPlayer]=curr;
   if(!sharedData.lastEdits)sharedData.lastEdits={};
   sharedData.lastEdits[currentPlayer]=new Date().toISOString();
-  saveData();renderPractice();
+  fbWrite('practice/'+sid+'/responses/'+currentPlayer, curr);
+  fbWrite('lastEdits/'+currentPlayer, sharedData.lastEdits[currentPlayer]);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderPractice();
 }
 function setPracticeField(sid,field,value){
   if(!sharedData.practice||!sharedData.practice[sid])return;
@@ -2949,13 +2951,15 @@ function setPracticeField(sid,field,value){
   var curr=sharedData.practice[sid].responses[currentPlayer]||{};
   curr[field]=value;
   sharedData.practice[sid].responses[currentPlayer]=curr;
-  clearTimeout(saveTimer);saveTimer=setTimeout(saveData,800);
+  clearTimeout(saveTimer);saveTimer=setTimeout(function(){ fbWrite('practice/'+sid+'/responses/'+currentPlayer, curr); },800);
 }
 function markAttendance(sid,player,status){
   if(!sharedData.practice||!sharedData.practice[sid])return;
   if(!sharedData.practice[sid].attendance)sharedData.practice[sid].attendance={};
   sharedData.practice[sid].attendance[player]=status;
-  saveData();renderPractice();showToast('Marked '+player+' as '+status);
+  fbWrite('practice/'+sid+'/attendance', sharedData.practice[sid].attendance);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderPractice();showToast('Marked '+player+' as '+status);
 }
 
 function renderFriendly(){
@@ -3014,9 +3018,13 @@ function saveFriendlyMatch(){
   if(!sharedData.friendly)sharedData.friendly={};
   var id='fm_'+Date.now();
   sharedData.friendly[id]={id:id,opponent:opponent,date:date,time:document.getElementById('fm-time').value,format:document.getElementById('fm-format').value,homeAway:document.getElementById('fm-homeaway').value,location:document.getElementById('fm-location').value,notes:document.getElementById('fm-notes').value,createdBy:currentPlayer};
-  saveData();document.getElementById('friendly-form-container').innerHTML='';renderFriendly();showToast('Match added!');
+  fbWrite('friendly/'+id, sharedData.friendly[id]);
+  document.getElementById('friendly-form-container').innerHTML='';renderFriendly();showToast('Match added!');
 }
-function deleteFriendly(mid){if(!confirm('Delete this match?'))return;if(sharedData.friendly)delete sharedData.friendly[mid];saveData();renderFriendly();}
+function deleteFriendly(mid){if(!confirm('Delete this match?'))return;if(sharedData.friendly)delete sharedData.friendly[mid];
+  fbWrite('friendly/'+mid, null);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderFriendly();}
 function setFriendlyStatus(mid,status){
   if(!sharedData.friendly||!sharedData.friendly[mid])return;
   if(!sharedData.friendly[mid].responses)sharedData.friendly[mid].responses={};
@@ -3024,7 +3032,10 @@ function setFriendlyStatus(mid,status){
   curr.status=status;curr.lastEdit=new Date().toISOString();
   sharedData.friendly[mid].responses[currentPlayer]=curr;
   if(!sharedData.lastEdits)sharedData.lastEdits={};sharedData.lastEdits[currentPlayer]=new Date().toISOString();
-  saveData();renderFriendly();
+  fbWrite('friendly/'+mid+'/responses/'+currentPlayer, curr);
+  fbWrite('lastEdits/'+currentPlayer, sharedData.lastEdits[currentPlayer]);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderFriendly();
 }
 function setFriendlyField(mid,field,value){
   if(!sharedData.friendly||!sharedData.friendly[mid])return;
@@ -3212,36 +3223,61 @@ function confirmRename(oldName){
   if(sharedData.players[newName]){alert('Player already exists!');return;}
   sharedData.players[newName]=sharedData.players[oldName]||{};delete sharedData.players[oldName];
   if(sharedData.pins&&sharedData.pins[oldName]){sharedData.pins[newName]=sharedData.pins[oldName];delete sharedData.pins[oldName];}
-  saveData();renderAdminPlayers();renderMatches('50overs');renderMatches('t20');showToast('Renamed to '+newName);
+  fbWrite('players/'+newName, sharedData.players[newName]);
+  fbWrite('players/'+oldName, null);
+  if(sharedData.pins&&sharedData.pins[newName]) fbWrite('pins/'+newName, sharedData.pins[newName]);
+  fbWrite('pins/'+oldName, null);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();renderMatches('50overs');renderMatches('t20');showToast('Renamed to '+newName);
 }
-function resetPlayerPin(player){if(!confirm('Reset PIN for "'+player+'"?'))return;if(sharedData.pins)delete sharedData.pins[player];saveData();renderAdminPlayers();showToast('PIN reset for '+player);}
-function clearPlayerData(player){if(!confirm('Clear ALL data for "'+player+'"?'))return;sharedData.players[player]={};saveData();renderAdminPlayers();renderMatches('50overs');renderMatches('t20');showToast('Data cleared for '+player);}
-function deletePlayer(player){if(!confirm('Delete "'+player+'" completely?'))return;delete sharedData.players[player];if(sharedData.pins)delete sharedData.pins[player];saveData();renderAdminPlayers();renderMatches('50overs');renderMatches('t20');updateCount();showToast(player+' deleted');}
+function resetPlayerPin(player){if(!confirm('Reset PIN for "'+player+'"?'))return;if(sharedData.pins)delete sharedData.pins[player];
+  fbWrite('pins/'+player, null);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();showToast('PIN reset for '+player);}
+function clearPlayerData(player){if(!confirm('Clear ALL data for "'+player+'"?'))return;sharedData.players[player]={};
+  fbWrite('players/'+player, {});
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();renderMatches('50overs');renderMatches('t20');showToast('Data cleared for '+player);}
+function deletePlayer(player){if(!confirm('Delete "'+player+'" completely?'))return;delete sharedData.players[player];if(sharedData.pins)delete sharedData.pins[player];
+  fbWrite('players/'+player, null);
+  fbWrite('pins/'+player, null);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();renderMatches('50overs');renderMatches('t20');updateCount();showToast(player+' deleted');}
 function toggleSessionPerm(player){
   if(!sharedData.permissions)sharedData.permissions={canCreateSessions:[],admins:[]};
   var arr=sharedData.permissions.canCreateSessions||[];var idx=arr.indexOf(player);
   if(idx>=0)arr.splice(idx,1);else arr.push(player);
-  sharedData.permissions.canCreateSessions=arr;saveData();renderAdminPlayers();
+  sharedData.permissions.canCreateSessions=arr;
+  fbWrite('permissions', sharedData.permissions);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();
   showToast(player+(idx>=0?' removed from':'added as')+' session creator');
 }
 function toggleUploadPerm(player){
   if(!sharedData.permissions)sharedData.permissions={canCreateSessions:[],admins:[],canUploadPhotos:[]};
   var arr=sharedData.permissions.canUploadPhotos||[];var idx=arr.indexOf(player);
   if(idx>=0)arr.splice(idx,1);else arr.push(player);
-  sharedData.permissions.canUploadPhotos=arr;saveData();renderAdminPlayers();
+  sharedData.permissions.canUploadPhotos=arr;
+  fbWrite('permissions', sharedData.permissions);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();
   showToast(player+(idx>=0?' removed from':'added as')+' photo uploader');
 }
 function toggleAdminRole(player){
   if(!sharedData.permissions)sharedData.permissions={canCreateSessions:[],admins:[]};
   var arr=sharedData.permissions.admins||[];var idx=arr.indexOf(player);
   if(idx>=0)arr.splice(idx,1);else arr.push(player);
-  sharedData.permissions.admins=arr;saveData();renderAdminPlayers();
+  sharedData.permissions.admins=arr;
+  fbWrite('permissions', sharedData.permissions);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+  renderAdminPlayers();
   showToast(player+(idx>=0?' demoted':'promoted to admin'));
 }
 function adminUnlockMatch(league,idx,player){
   if(!sharedData.adminUnlocks)sharedData.adminUnlocks={};
   sharedData.adminUnlocks[league+'_'+idx+'_'+player]=true;
-  saveData();renderMatches(league);showToast('Unlocked match for '+player);
+  fbWrite('adminUnlocks/'+league+'_'+idx+'_'+player, true);
+  renderMatches(league);showToast('Unlocked match for '+player);
 }
 
 
@@ -3474,7 +3510,8 @@ function uploadAvatar(input, player){
     if(!sharedData.profiles) sharedData.profiles = {};
     if(!sharedData.profiles[player]) sharedData.profiles[player] = {};
     sharedData.profiles[player].photoURL = e.target.result;
-    saveData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+    // Avatar stored in localStorage only (base64 too large for Firebase)
     renderTeam();
     showToast('Photo updated!');
   };
@@ -3568,7 +3605,11 @@ function saveProfile(player){
     if(!sharedData.improvements) sharedData.improvements={};
     sharedData.improvements[player] = Array.from(impChecks).map(function(c){return c.value;});
   }
-  saveData();
+  fbWrite('profiles/'+player, stripDataURLs(sharedData.profiles[player]));
+  if(adminUnlocked && sharedData.improvements && sharedData.improvements[player]){
+    fbWrite('improvements/'+player, sharedData.improvements[player]);
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
   document.getElementById('edit-profile-modal').remove();
   renderTeam();
   showToast('Profile saved!');
@@ -3903,7 +3944,8 @@ function saveCaption(storageKey, photoId){
   if(!inp) return;
   if(sharedData.photos && sharedData.photos[storageKey] && sharedData.photos[storageKey][photoId]){
     sharedData.photos[storageKey][photoId].caption = inp.value.trim();
-    saveData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+    // Photos stay in localStorage only — not written to Firebase
     renderPhotos();
     showToast('Caption saved!');
   }
@@ -4091,7 +4133,8 @@ function confirmUpload(){
       done++;
       if(progFill) progFill.style.width = Math.round(done/total*100)+'%';
       if(done===total){
-        saveData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+        // Photos stored in localStorage only (base64 too large for Firebase)
         closeUploadModal();
         renderPhotos();
         showToast(done+' photo'+(done!==1?'s':'')+' uploaded! &#128247;');
@@ -4117,7 +4160,8 @@ function deletePhoto(storageKey, photoId){
   if(!confirm('Delete this photo?')) return;
   if(sharedData.photos && sharedData.photos[storageKey]){
     delete sharedData.photos[storageKey][photoId];
-    saveData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(removeUndefined(sharedData)));
+    // Photos stay in localStorage only
     renderPhotos();
     showToast('Photo deleted.');
   }
@@ -4500,7 +4544,7 @@ function buildSeasonSelector(){
 function setActiveSeason(season){
   if(!sharedData.settings) sharedData.settings={};
   sharedData.settings.activeSeason = season;
-  saveData();
+  fbWrite('settings', sharedData.settings);
   renderMatchesTab();
 }
 
@@ -4921,7 +4965,7 @@ function saveMatchResult(matchId){
   sharedData.achievements[matchId]=byPlayer;
 
   var doSave = function(){
-    saveData();
+    fbWrite('matchSummaries', sharedData.matchSummaries);
     document.getElementById('result-modal').remove();
     renderMatchesTab();
     showToast('Result saved!');
@@ -5034,7 +5078,7 @@ function respondRole(roleId, response){
   if(sharedData.roleNotifications&&sharedData.roleNotifications[currentPlayer]){
     delete sharedData.roleNotifications[currentPlayer][roleId];
   }
-  saveData();
+  fbWrite('matchSummaries', sharedData.matchSummaries);
   var banner = document.getElementById('role-pending-banner');
   if(banner) banner.remove();
   checkPendingRoles();
@@ -5116,7 +5160,7 @@ function assignRole(player, roleId){
   if(!sharedData.roleNotifications) sharedData.roleNotifications={};
   if(!sharedData.roleNotifications[player]) sharedData.roleNotifications[player]={};
   sharedData.roleNotifications[player][roleId]='new';
-  saveData();
+  fbWrite('matchSummaries', sharedData.matchSummaries);
   renderAdminPlayers();
   renderRoleAssignment();
   renderTeam(); // Refresh team tab so badge shows immediately
@@ -5126,7 +5170,7 @@ function assignRole(player, roleId){
 function revokeRole(player, roleId){
   if(sharedData.playerRoles&&sharedData.playerRoles[player]){
     delete sharedData.playerRoles[player][roleId];
-    saveData();
+    fbWrite('matchSummaries', sharedData.matchSummaries);
     renderAdminPlayers();
     renderTeam();
     showToast('Role removed from '+player);
@@ -5183,12 +5227,12 @@ function addCustomAch(){
   if(!sharedData.customAchievements) sharedData.customAchievements=[];
   var id='cach_'+Date.now();
   sharedData.customAchievements.push({id,emoji,label});
-  saveData();document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
+  fbWrite('customAchievements', sharedData.customAchievements);document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
 }
 function deleteCustomAch(i){
   if(!sharedData.customAchievements) return;
   sharedData.customAchievements.splice(i,1);
-  saveData();document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
+  fbWrite('customAchievements', sharedData.customAchievements||[]);document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
 }
 function addCustomImp(){
   var emoji=document.getElementById('new-imp-emoji').value.trim();
@@ -5197,12 +5241,12 @@ function addCustomImp(){
   if(!sharedData.customImprovements) sharedData.customImprovements=[];
   var id='cimp_'+Date.now();
   sharedData.customImprovements.push({id,emoji,label});
-  saveData();document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
+  fbWrite('customImprovements', sharedData.customImprovements);document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
 }
 function deleteCustomImp(i){
   if(!sharedData.customImprovements) return;
   sharedData.customImprovements.splice(i,1);
-  saveData();document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
+  fbWrite('customImprovements', sharedData.customImprovements||[]);document.getElementById('custom-ach-modal').remove();showCustomAchievementsForm();
 }
 
 // ─── CUSTOM ROLES ADMIN ───────────────────────────────────────────────────────
@@ -5251,19 +5295,19 @@ function addCustomRole(){
   if(!sharedData.customRoles) sharedData.customRoles=[];
   var id='crole_'+Date.now();
   sharedData.customRoles.push({id,emoji,label,perms});
-  saveData();document.getElementById('custom-role-modal').remove();showCustomRolesForm();showToast('Custom role added!');
+  fbWrite('customRoles', sharedData.customRoles);document.getElementById('custom-role-modal').remove();showCustomRolesForm();showToast('Custom role added!');
 }
 function deleteCustomRole(i){
   if(!sharedData.customRoles) return;
   sharedData.customRoles.splice(i,1);
-  saveData();document.getElementById('custom-role-modal').remove();showCustomRolesForm();
+  fbWrite('customRoles', sharedData.customRoles||[]);document.getElementById('custom-role-modal').remove();showCustomRolesForm();
 }
 
 
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.8.2';
+var APP_VERSION = 'v1.8.3';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -5631,7 +5675,8 @@ function saveNewAuth(){
     sharedData.pins[currentPlayer]=hashPin(newVal);
   }
   if(sharedData.tempPins) delete sharedData.tempPins[currentPlayer];
-  saveData();
+  fbWrite('pins/'+currentPlayer, sharedData.pins[currentPlayer]);
+  fbWrite('tempPins/'+currentPlayer, null);
   document.getElementById('change-auth-modal').remove();
   showToast('Security updated!');
 }
@@ -6140,7 +6185,7 @@ function saveScorecardEntry(matchId){
     savedBy:currentPlayer, savedAt:new Date().toISOString()
   };
 
-  saveData();
+  fbWrite('scorecards/'+matchId, sharedData.scorecards[matchId]);
   closeScorecardModal();
   renderMatchesTab();
   showToast('Scorecard saved!');
@@ -6247,7 +6292,7 @@ async function callClaudeForScorecard(base64Data, mediaType, matchId, statusEl){
     // Save extracted data
     if(!sharedData.scorecards)sharedData.scorecards={};
     sharedData.scorecards[matchId]=Object.assign({},parsed,{savedBy:currentPlayer,savedAt:new Date().toISOString(),importedViaAI:true});
-    saveData();
+    fbWrite('scorecards/'+matchId, sharedData.scorecards[matchId]);
     statusEl.className='ai-status success';
     statusEl.innerHTML='✅ Scorecard extracted successfully! Closing and updating match card...';
     setTimeout(function(){
@@ -6351,7 +6396,7 @@ function handleExcelImport(input){
         oppInnings:{batting:oppBat,bowling:ourBowl,extras:{},total:'',wkts:'',overs:''},
         savedBy:currentPlayer,savedAt:new Date().toISOString(),importedViaExcel:true
       };
-      saveData();
+      fbWrite('scorecards/'+matchId, sharedData.scorecards[matchId]);
       statusEl.className='ai-status success';
       statusEl.innerHTML='✅ Excel scorecard imported! Please review and add totals/extras in the scorecard form.';
       setTimeout(function(){
