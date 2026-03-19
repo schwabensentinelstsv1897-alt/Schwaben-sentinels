@@ -255,7 +255,17 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
 .mobile-more-drawer.open{display:block}
 .mobile-more-item{display:flex;align-items:center;gap:12px;padding:11px 20px;color:var(--soft);font-size:13px;font-family:'Outfit',sans-serif;cursor:pointer;border:none;background:none;width:100%;text-align:left}
 .mobile-more-item.active{color:var(--gold);background:rgba(200,168,75,.08)}
-@media(max-width:700px){.main{padding-bottom:70px!important}}
+@media(max-width:700px){
+.main{padding-bottom:70px!important}
+#desktop-tabs{display:none!important}
+.mobile-tab-bar{display:block!important}
+.header-inner{padding:10px 14px}
+.logo-img{width:44px;height:44px}
+.logo-title{font-size:22px}
+.logo-sub{font-size:9px}
+.sec-title{font-size:18px}
+.match-card{border-radius:10px;padding:14px}
+}
 .app-footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:20px}
 .app-footer span{color:var(--gold)}
 
@@ -1092,7 +1102,7 @@ function renderPendingSummary(league){
     var opp = p.match.location==='Home' ? p.match.away : p.match.home;
     var oppShort = opp.length>14 ? opp.substring(0,13)+'…' : opp;
     return '<span class="pending-match-chip" data-lg="'+p.league+'" data-idx="'+p.idx+'" onclick="scrollToCard(this.dataset.lg,this.dataset.idx)">'
-      +'<span class="chip-date">'+p.match.date.replace('.2026','')+'</span>'
+      +'<span class="chip-date">'+p.match.date.replace('.2026','')+' · </span>'
       +'<span class="chip-opp">'+(p.match.location==='Home'?'🟢':'🔵')+' '+esc(oppShort)+'</span>'
       +'</span>';
   }).join('');
