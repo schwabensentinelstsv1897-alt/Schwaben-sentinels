@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.1</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.2</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1222,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.1</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.2</span></div>
   </div>
 </div>
 
@@ -5263,7 +5263,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.8.1';
+var APP_VERSION = 'v1.8.2';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -5522,13 +5522,34 @@ function adminAddPlayer(){
       .then(function(){
         console.log('Player '+name+' written directly to Firebase ✅');
         showToast(name+' added! Share the PIN: '+pin);
-        // Verify it was saved
+        // Verify it was saved - check both path and root
         setTimeout(function(){
+          // Test 1: Check specific player path
           window.__fbGet(window.__fbRef(window.__db,'tsvgd/players/'+name))
             .then(function(snap){
-              console.log('Verify player in Firebase:', snap.val() !== null ? '✅ CONFIRMED' : '❌ NOT FOUND');
-            });
-        }, 1000);
+              var found = snap.val() !== null;
+              console.log('Verify player path tsvgd/players/'+name+':', found ? '✅ CONFIRMED' : '❌ NOT FOUND');
+              if(!found){
+                // Test 2: Write to isolated test path outside tsvgd
+                return window.__fbSet(window.__fbRef(window.__db,'_writetest/'+Date.now()), {name:name, ts:new Date().toISOString()})
+                  .then(function(){
+                    console.log('Isolated write test: ✅ Written to _writetest path');
+                    return window.__fbGet(window.__fbRef(window.__db,'_writetest'));
+                  })
+                  .then(function(s2){
+                    console.log('Isolated write verify:', s2.val() ? '✅ DATA PERSISTED outside tsvgd' : '❌ Data not found even outside tsvgd');
+                    // Test 3: Check total tsvgd size
+                    return window.__fbGet(window.__fbRef(window.__db,'tsvgd'));
+                  })
+                  .then(function(s3){
+                    var sz = JSON.stringify(s3.val()||{}).length;
+                    console.log('Total tsvgd size in Firebase:', sz, 'chars =', (sz/1024).toFixed(1), 'KB');
+                    console.log('Firebase players currently:', Object.keys((s3.val()||{}).players||{}));
+                  });
+              }
+            })
+            .catch(function(e){ console.error('Verify error:', e.code, e.message); });
+        }, 2000);
       })
       .catch(function(e){
         console.error('Firebase update() failed:', e.code, e.message);
