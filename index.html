@@ -266,6 +266,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
 .sec-title{font-size:18px}
 .match-card{border-radius:10px;padding:14px}
 }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .app-footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:20px}
 .app-footer span{color:var(--gold)}
 
@@ -549,7 +550,8 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
     <button class="tab" id="tab-activity" onclick="switchTab('activity',this)">🕐 Activity</button>
     <button class="tab" id="tab-matches" onclick="switchTab('matches',this)">🏏 Matches</button>
     <button class="tab" id="tab-team" onclick="switchTab('team',this)">👥 Team</button>
-    <button class="tab" id="tab-photos" onclick="switchTab('photos',this)">📸 Photos</button>
+    <button class="tab" id="tab-photos" onclick="switchTab('photos',this)">📸 Photos <span style="font-size:9px;color:var(--gold);vertical-align:middle">soon</span></button>
+    <button class="tab" id="tab-bugs" onclick="switchTab('bugs',this)">🐛 Bugs</button>
     <button class="tab" id="tab-admin" onclick="switchTab('admin',this)">⚙️ Admin</button>
   </div>
   <!-- Mobile dropdown -->
@@ -582,7 +584,8 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
       <button class="mobile-more-item" id="mmi-activity" onclick="switchTab('activity',null);toggleMoreDrawer()"><span class="mmi-icon">🕐</span> Activity</button>
       <button class="mobile-more-item" id="mmi-matches" onclick="switchTab('matches',null);toggleMoreDrawer()"><span class="mmi-icon">📋</span> Matches</button>
       <button class="mobile-more-item" id="mmi-team" onclick="switchTab('team',null);toggleMoreDrawer()"><span class="mmi-icon">👥</span> Team</button>
-      <button class="mobile-more-item" id="mmi-photos" onclick="switchTab('photos',null);toggleMoreDrawer()"><span class="mmi-icon">📸</span> Photos</button>
+      <button class="mobile-more-item" id="mmi-photos" onclick="switchTab('photos',null);toggleMoreDrawer()" style="opacity:.7"><span class="mmi-icon">📸</span> Photos <span style="font-size:10px;color:var(--gold);margin-left:4px">soon</span></button>
+      <button class="mobile-more-item" id="mmi-bugs" onclick="switchTab('bugs',null);toggleMoreDrawer()"><span class="mmi-icon">🐛</span> Report Bug</button>
       <button class="mobile-more-item" id="mmi-admin" onclick="switchTab('admin',null);toggleMoreDrawer()"><span class="mmi-icon">⚙️</span> Admin</button>
     </div>
   </div>
@@ -723,25 +726,63 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="sec-hdr">
           <div class="sec-title">📸 Photos</div>
         </div>
-        <!-- Storage bar -->
-        <div id="storage-bar-wrap" style="background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:12px;color:var(--soft);font-weight:600;letter-spacing:1px;text-transform:uppercase">Firebase Storage</span>
-            <span id="storage-text" style="font-size:12px;color:var(--muted)">Calculating...</span>
+        <!-- Coming Soon Banner -->
+        <div style="background:var(--mid);border:2px dashed var(--border);border-radius:14px;padding:32px 24px;text-align:center;margin-bottom:24px">
+          <div style="font-size:48px;margin-bottom:12px">📸</div>
+          <div style="font-family:Bebas Neue,cursive;font-size:24px;letter-spacing:2px;color:var(--gold);margin-bottom:8px">Photos — Coming Soon</div>
+          <div style="font-size:13px;color:var(--soft);line-height:1.7;max-width:340px;margin:0 auto 16px">
+            We're setting up <strong style="color:var(--gold)">Firebase Cloud Storage</strong> so photos are shared across all devices instantly.<br><br>
+            Once live, you'll be able to upload match, practice and team photos — visible to everyone on any device.
           </div>
-          <div style="height:6px;background:var(--deep);border-radius:3px;overflow:hidden">
-            <div id="storage-fill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:3px;transition:width .4s"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+            <div style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--soft)">🏏 Match Photos</div>
+            <div style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--soft)">🏋 Practice Photos</div>
+            <div style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--soft)">👥 Team Photos</div>
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">Free tier: 5 GB total · iPhone tip: Settings → Camera → Formats → Most Compatible (saves as JPG)</div>
+          <div style="margin-top:20px;display:inline-flex;align-items:center;gap:8px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.3);border-radius:20px;padding:6px 16px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.5s infinite"></div>
+            <span style="font-size:12px;color:var(--gold);font-weight:600">Work in progress</span>
+          </div>
         </div>
-        <!-- Album tabs -->
-        <div class="league-toggle" style="margin-bottom:20px">
-          <button class="ltoggle active" id="photo-lt-match" onclick="switchPhotoAlbum('match')">Match</button>
-          <button class="ltoggle" id="photo-lt-practice" onclick="switchPhotoAlbum('practice')">Practice</button>
-          <button class="ltoggle" id="photo-lt-team" onclick="switchPhotoAlbum('team')">Team</button>
-        </div>
-        <div id="photos-content"></div>
       </div>
+
+      <!-- REPORT BUG PANEL -->
+    <div class="panel" id="panel-bugs">
+      <div class="sec-hdr">
+        <div class="sec-title">🐛 Report a Bug</div>
+      </div>
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="font-size:13px;color:var(--soft);margin-bottom:16px;line-height:1.6">
+          Found something broken or have a suggestion? Let us know — your report goes straight to the admin.
+        </div>
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">Type</label>
+          <select class="form-input" id="bug-type" style="max-width:260px">
+            <option value="bug">🐛 Bug — something is broken</option>
+            <option value="ui">🎨 UI — looks wrong or confusing</option>
+            <option value="feature">💡 Feature request</option>
+            <option value="data">💾 Data — something didn't save</option>
+            <option value="other">📝 Other</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">What happened?</label>
+          <textarea class="form-input" id="bug-description" rows="4" placeholder="Describe the issue — what did you do, what did you expect, what actually happened..."></textarea>
+        </div>
+        <div class="form-field" style="margin-bottom:16px">
+          <label class="form-label">Which tab or feature?</label>
+          <input class="form-input" id="bug-location" placeholder="e.g. Practice tab, Add Player, Login screen..." />
+        </div>
+        <button class="btn-save" onclick="submitBugReport()" style="padding:10px 28px">📤 Submit Report</button>
+      </div>
+      <div id="bug-submitted-msg" style="display:none;background:rgba(26,107,60,.15);border:1px solid var(--green);border-radius:12px;padding:16px 20px;text-align:center">
+        <div style="font-size:20px;margin-bottom:6px">✅</div>
+        <div style="font-weight:600;color:var(--yes-t);margin-bottom:4px">Report submitted!</div>
+        <div style="font-size:12px;color:var(--muted)">Thank you — the admin will review it.</div>
+      </div>
+      <!-- My past reports -->
+      <div id="my-bug-reports" style="margin-top:20px"></div>
+    </div>
 
       <!-- ADMIN PANEL -->
     <div class="panel" id="panel-admin">
@@ -993,7 +1034,7 @@ const FRIENDLY_FORMATS=['T20','50 Overs','40 Overs','30 Overs','Other'];
 const sColors={yes:'#7ae89e',maybe:'#e8c96a',no:'#e87a7a'};
 const sLabels={yes:'Available',maybe:'Maybe',no:'Unavailable'};
 const sEmoji={yes:'✓',maybe:'?',no:'✗',pending:'-'};
-const tabLabels={'50overs':'50 Overs - Verbandsliga','t20':'T20 - Verbandsliga','friendly':'Friendly Matches','practice':'Practice','overview':'Overview','activity':'Activity','admin':'Admin'};
+const tabLabels={'50overs':'50 Overs - Verbandsliga','t20':'T20 - Verbandsliga','friendly':'Friendly Matches','practice':'Practice','overview':'Overview','activity':'Activity','admin':'Admin','bugs':'Report a Bug','photos':'Photos','matches':'Matches','team':'Team'};
 const ADMIN_KEY='tsvgd-admin-pin';
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1725,6 +1766,7 @@ window.switchTab=function(tab,btn){
   else if(tab==='admin'){initAdminPanel();loadSettingsIntoForm();}
   else if(tab==='team'){renderTeam();}
   else if(tab==='photos'){renderPhotos();updateStorageBar();}
+  else if(tab==='bugs'){renderMyBugReports();}
   else if(tab==='matches'){switchMatchLeague(currentMatchLeague);}
 };
 
