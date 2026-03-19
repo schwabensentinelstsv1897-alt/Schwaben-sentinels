@@ -648,7 +648,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.0</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.1</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1295,7 +1295,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.0</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.1</span></div>
   </div>
 </div>
 
@@ -5455,7 +5455,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.0.0';
+var APP_VERSION = 'v2.0.1';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -6665,6 +6665,137 @@ function renderCareerStats(player){
     +'</div>';
 }
 
+
+
+// ─── BUG REPORT SYSTEM ────────────────────────────────────────────────────────
+function submitBugReport(){
+  var type = document.getElementById('bug-type').value;
+  var desc = document.getElementById('bug-description').value.trim();
+  var location = document.getElementById('bug-location').value.trim();
+  if(!desc){ showToast('Please describe the issue.'); return; }
+
+  if(!sharedData.bugReports) sharedData.bugReports = {};
+  var id = 'bug_' + Date.now();
+  var report = {
+    id: id, type: type, description: desc,
+    location: location || 'Not specified',
+    reportedBy: currentPlayer,
+    reportedAt: new Date().toISOString(),
+    status: 'open'
+  };
+  sharedData.bugReports[id] = report;
+  fbWrite('bugReports/' + id, report);
+
+  // Clear form
+  document.getElementById('bug-description').value = '';
+  document.getElementById('bug-location').value = '';
+  document.getElementById('bug-type').value = 'bug';
+
+  // Show success message
+  var msg = document.getElementById('bug-submitted-msg');
+  if(msg){ msg.style.display = 'block'; setTimeout(function(){ msg.style.display = 'none'; }, 3000); }
+
+  renderMyBugReports();
+  showToast('Bug report submitted ✅');
+}
+
+function renderMyBugReports(){
+  var container = document.getElementById('my-bug-reports');
+  if(!container) return;
+  var all = Object.values(sharedData.bugReports || {})
+    .filter(function(r){ return r.reportedBy === currentPlayer; })
+    .sort(function(a,b){ return (b.reportedAt||'').localeCompare(a.reportedAt||''); });
+  if(all.length === 0){ container.innerHTML = ''; return; }
+  var typeEmoji = {bug:'🐛', ui:'🎨', feature:'💡', data:'💾', other:'📝'};
+  var statusColor = {open:'var(--maybe-t)', reviewing:'var(--gold)', fixed:'var(--yes-t)', wontfix:'var(--muted)'};
+  container.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--soft);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase">Your Previous Reports</div>'
+    + all.map(function(r){
+        return '<div style="background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
+          + '<div style="display:flex;align-items:center;gap:8px">'
+          + '<span style="font-size:16px">' + (typeEmoji[r.type]||'📝') + '</span>'
+          + '<span style="font-size:12px;color:var(--muted)">' + fmtDateTime(r.reportedAt) + '</span>'
+          + '<span style="font-size:11px;color:var(--muted)">· ' + esc(r.location) + '</span>'
+          + '</div>'
+          + '<span style="font-size:11px;font-weight:600;color:' + (statusColor[r.status]||'var(--muted)') + ';text-transform:uppercase">' + (r.status||'open') + '</span>'
+          + '</div>'
+          + '<div style="font-size:13px;color:var(--text);line-height:1.5">' + esc(r.description) + '</div>'
+          + (r.adminNote ? '<div style="margin-top:8px;padding:8px 12px;background:rgba(200,168,75,.1);border-left:3px solid var(--gold);font-size:12px;color:var(--soft)">💬 Admin: ' + esc(r.adminNote) + '</div>' : '')
+          + '</div>';
+      }).join('');
+}
+
+function renderAdminBugReports(){
+  var container = document.getElementById('admin-bug-reports');
+  if(!container) return;
+  var all = Object.values(sharedData.bugReports || {})
+    .sort(function(a,b){ return (b.reportedAt||'').localeCompare(a.reportedAt||''); });
+  if(all.length === 0){
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No bug reports yet.</div>';
+    return;
+  }
+  var typeEmoji = {bug:'🐛', ui:'🎨', feature:'💡', data:'💾', other:'📝'};
+  var typeLabel = {bug:'Bug', ui:'UI Issue', feature:'Feature Request', data:'Data Issue', other:'Other'};
+  var statusOptions = ['open','reviewing','fixed','wontfix'];
+  var statusColor = {open:'var(--maybe-t)', reviewing:'var(--gold)', fixed:'var(--yes-t)', wontfix:'var(--muted)'};
+  var openCount = all.filter(function(r){ return r.status === 'open'; }).length;
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">'
+    + '<div style="font-size:13px;color:var(--soft)">' + all.length + ' total · <span style="color:var(--maybe-t)">' + openCount + ' open</span></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + ['all','open','fixed'].map(function(f){
+        return '<button class="admin-btn admin-btn-gray" style="padding:4px 12px;font-size:11px" data-f="'+f+'" onclick="filterBugReports(this.dataset.f)">' + f + '</button>';
+      }).join('')
+    + '</div></div>'
+    + all.map(function(r){
+        var selOpts = statusOptions.map(function(s){
+          return '<option value="' + s + '"' + (r.status===s?' selected':'') + '>' + s + '</option>';
+        }).join('');
+        return '<div class="admin-row" style="flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:10px">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px">'
+          + '<div style="display:flex;align-items:center;gap:8px">'
+          + '<span style="font-size:18px">' + (typeEmoji[r.type]||'📝') + '</span>'
+          + '<div><div style="font-weight:600;font-size:13px;color:var(--text)">' + (typeLabel[r.type]||'Report') + ' — ' + esc(r.reportedBy) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted)">' + fmtDateTime(r.reportedAt) + ' · ' + esc(r.location) + '</div></div></div>'
+          + '<div style="display:flex;align-items:center;gap:8px">'
+          + '<select class="form-input" style="width:auto;font-size:11px;padding:4px 8px" data-id="' + r.id + '" onchange="updateBugStatus(this.dataset.id, this.value)">' + selOpts + '</select>'
+          + '<button class="admin-action-btn delete" data-id="' + r.id + '" onclick="deleteBugReport(this.dataset.id)">✕</button>'
+          + '</div></div>'
+          + '<div style="font-size:13px;color:var(--text);line-height:1.5;padding:10px 14px;background:var(--deep);border-radius:8px;width:100%;box-sizing:border-box">' + esc(r.description) + '</div>'
+          + '<div style="display:flex;gap:8px;width:100%">'
+          + '<input class="form-input" placeholder="Add admin note..." value="' + esc(r.adminNote||'') + '" id="adminnote-' + r.id + '" style="flex:1;font-size:12px" />'
+          + '<button class="admin-btn admin-btn-green" data-id="' + r.id + '" onclick="saveAdminNote(this.dataset.id)" style="padding:6px 14px;font-size:12px">Save note</button>'
+          + '</div></div>';
+      }).join('');
+}
+
+function filterBugReports(filter){
+  renderAdminBugReports();
+}
+
+function updateBugStatus(id, status){
+  if(!sharedData.bugReports || !sharedData.bugReports[id]) return;
+  sharedData.bugReports[id].status = status;
+  fbWrite('bugReports/' + id + '/status', status);
+  showToast('Status updated: ' + status);
+  renderAdminBugReports();
+}
+
+function saveAdminNote(id){
+  var inp = document.getElementById('adminnote-' + id);
+  if(!inp || !sharedData.bugReports || !sharedData.bugReports[id]) return;
+  sharedData.bugReports[id].adminNote = inp.value.trim();
+  fbWrite('bugReports/' + id + '/adminNote', inp.value.trim());
+  showToast('Note saved ✅');
+  renderAdminBugReports();
+}
+
+function deleteBugReport(id){
+  if(!confirm('Delete this report?')) return;
+  if(sharedData.bugReports) delete sharedData.bugReports[id];
+  fbWrite('bugReports/' + id, null);
+  renderAdminBugReports();
+  showToast('Report deleted.');
+}
 
 
 // Try to populate dropdown from localStorage immediately on load
