@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.7.8</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.0</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1222,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.7.8</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.0</span></div>
   </div>
 </div>
 
@@ -4191,8 +4191,23 @@ function runFbDiag(){
           lines.push(ok + ' CLEANUP OK — test key deleted');
           lines.push('<br><b style="color:var(--green2)">Firebase is working correctly ✅</b>');
           if(fbCount < playerCount){
-            lines.push(warn + ' ' + (playerCount-fbCount) + ' player(s) in memory not in Firebase — try Save All below');
+            lines.push(warn + ' ' + (playerCount-fbCount) + ' player(s) in memory not in Firebase');
             lines.push('<button onclick="forceSaveAllToFirebase()" style="background:var(--gold);color:#000;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:6px;font-family:Outfit,sans-serif">💾 Force Save All Players to Firebase</button>');
+            // Test writing just one missing player
+            var missingPlayers = Object.keys(sharedData.players||{}).filter(function(p){ return fbPlayers.indexOf(p)<0; });
+            if(missingPlayers.length > 0){
+              var testP = missingPlayers[0];
+              lines.push('<br>Testing direct write for missing player: <b>'+testP+'</b>');
+              window.__fbSet(window.__fbRef(window.__db,'tsvgd/players/'+testP), {_test:true})
+                .then(function(){
+                  lines.push(ok + ' Direct path write OK for '+testP+' — update() may have a path encoding issue');
+                  out.innerHTML = lines.join('<br>');
+                })
+                .catch(function(e){
+                  lines.push(err + ' Direct path write FAILED: ' + e.code + ' — ' + e.message);
+                  out.innerHTML = lines.join('<br>');
+                });
+            }
           }
           out.innerHTML = lines.join('<br>');
         });
@@ -4207,14 +4222,43 @@ function runFbDiag(){
 
 function forceSaveAllToFirebase(){
   if(!window.__fbReady || !window.__db || !window.__fbSet) return;
-  showToast('Force saving all data to Firebase...');
+  var out = document.getElementById('fb-diag-output');
   var clean = removeUndefined(sharedData);
-  window.__fbSet(window.__fbRef(window.__db,'tsvgd'), clean)
+  var playerCount = Object.keys(clean.players||{}).length;
+  
+  // Log exactly what we're trying to save
+  console.log('Force save: attempting to write', playerCount, 'players:', Object.keys(clean.players||{}));
+  console.log('Force save data size:', JSON.stringify(clean).length, 'chars');
+  
+  if(out) out.innerHTML += '<br><b>Force saving '+playerCount+' players...</b>';
+  
+  // Try writing just the players object first to isolate issues
+  window.__fbSet(window.__fbRef(window.__db,'tsvgd/players'), clean.players||{})
     .then(function(){
-      showToast('Force save complete ✅ — ' + Object.keys(clean.players||{}).length + ' players saved');
-      runFbDiag();
+      console.log('Players write OK ✅');
+      if(out) out.innerHTML += '<br>✅ Players written OK';
+      // Now write pins
+      return window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins'), clean.pins||{});
+    })
+    .then(function(){
+      console.log('Pins write OK ✅');
+      if(out) out.innerHTML += '<br>✅ Pins written OK';
+      // Now write everything else
+      var rest = {};
+      Object.keys(clean).forEach(function(k){
+        if(k !== 'players' && k !== 'pins') rest[k] = clean[k];
+      });
+      return window.__fbSet(window.__fbRef(window.__db,'tsvgd'), Object.assign({}, clean));
+    })
+    .then(function(){
+      console.log('Full save OK ✅');
+      if(out) out.innerHTML += '<br><b style="color:var(--green2)">✅ Force save complete — '+playerCount+' players saved</b>';
+      showToast('Force save complete ✅');
+      setTimeout(runFbDiag, 1500);
     })
     .catch(function(e){
+      console.error('Force save error:', e.code, e.message, e);
+      if(out) out.innerHTML += '<br>❌ Error: <b>' + e.code + '</b> — ' + e.message;
       showToast('Force save FAILED: ' + e.message);
     });
 }
@@ -5188,7 +5232,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.7.8';
+var APP_VERSION = 'v1.8.0';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -5445,14 +5489,32 @@ function adminAddPlayer(){
     }
     window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
       .then(function(){
-        console.log('Player '+name+' written directly to Firebase');
+        console.log('Player '+name+' written directly to Firebase ✅');
         showToast(name+' added! Share the PIN: '+pin);
+        // Verify it was saved
+        setTimeout(function(){
+          window.__fbGet(window.__fbRef(window.__db,'tsvgd/players/'+name))
+            .then(function(snap){
+              console.log('Verify player in Firebase:', snap.val() !== null ? '✅ CONFIRMED' : '❌ NOT FOUND');
+            });
+        }, 1000);
       })
       .catch(function(e){
-        console.error('Firebase direct write failed:', e);
-        // Fallback to saveData
-        saveData();
-        showToast(name+' added! Share the PIN: '+pin);
+        console.error('Firebase update() failed:', e.code, e.message);
+        // Fallback: use set() on specific child refs
+        console.log('Trying fallback set() writes...');
+        Promise.all([
+          window.__fbSet(window.__fbRef(window.__db,'tsvgd/players/'+name), {}),
+          window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins/'+name), hashPin(pin)),
+          window.__fbSet(window.__fbRef(window.__db,'tsvgd/tempPins/'+name), true)
+        ]).then(function(){
+          console.log('Fallback set() writes OK ✅');
+          showToast(name+' added! Share the PIN: '+pin);
+        }).catch(function(e2){
+          console.error('Fallback set() also failed:', e2.message);
+          saveData();
+          showToast(name+' added! (locally) Share the PIN: '+pin);
+        });
       });
   } else {
     saveData();
