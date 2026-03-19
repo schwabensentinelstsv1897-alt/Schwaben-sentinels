@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.0</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.8.1</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1222,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.0</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.8.1</span></div>
   </div>
 </div>
 
@@ -1642,15 +1642,36 @@ function saveData(){
         }
         var clean = removeUndefined(sharedData);
 
+        // Strip photo dataURLs before Firebase write — they are too large (base64 images)
+        // Photos are stored in localStorage for local device display only
+        // Firebase only stores photo metadata (caption, uploader, date) without the image data
+        var cleanForFirebase = JSON.parse(JSON.stringify(clean));
+        if(cleanForFirebase.photos){
+          Object.keys(cleanForFirebase.photos).forEach(function(album){
+            Object.keys(cleanForFirebase.photos[album]||{}).forEach(function(pid){
+              if(cleanForFirebase.photos[album][pid]){
+                delete cleanForFirebase.photos[album][pid].dataURL; // Remove base64 image
+              }
+            });
+          });
+        }
+        // Also strip profile photoURLs (avatars stored as base64)
+        if(cleanForFirebase.profiles){
+          Object.keys(cleanForFirebase.profiles).forEach(function(p){
+            if(cleanForFirebase.profiles[p] && cleanForFirebase.profiles[p].photoURL){
+              delete cleanForFirebase.profiles[p].photoURL;
+            }
+          });
+        }
+
         // Build truly granular update paths to avoid cross-device conflicts.
-        // Write individual player entries, not the whole players object.
         var updates = {};
         // Per-player granular paths
-        Object.keys(clean.players||{}).forEach(function(p){
-          updates['players/'+p] = clean.players[p];
+        Object.keys(cleanForFirebase.players||{}).forEach(function(p){
+          updates['players/'+p] = cleanForFirebase.players[p];
         });
-        Object.keys(clean.pins||{}).forEach(function(p){
-          updates['pins/'+p] = clean.pins[p];
+        Object.keys(cleanForFirebase.pins||{}).forEach(function(p){
+          updates['pins/'+p] = cleanForFirebase.pins[p];
         });
         // Bulk keys that don't conflict across devices
         ['profiles','settings','practice','friendly','photos',
@@ -1658,8 +1679,11 @@ function saveData(){
          'seasons','schedule','lateCancellations','lastEdits','tempPins',
          'customRoles','customAchievements','customImprovements','grounds',
          'adminUnlocks','authType'].forEach(function(key){
-          if(clean[key] !== undefined) updates[key] = clean[key];
+          if(cleanForFirebase[key] !== undefined) updates[key] = cleanForFirebase[key];
         });
+
+        var fbSize = JSON.stringify(updates).length;
+        console.log('Firebase write size:', fbSize, 'chars', fbSize > 900000 ? '⚠️ LARGE' : '✅ OK');
 
         var doSave = window.__fbUpdate
           ? window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
@@ -4225,30 +4249,37 @@ function forceSaveAllToFirebase(){
   var out = document.getElementById('fb-diag-output');
   var clean = removeUndefined(sharedData);
   var playerCount = Object.keys(clean.players||{}).length;
-  
-  // Log exactly what we're trying to save
-  console.log('Force save: attempting to write', playerCount, 'players:', Object.keys(clean.players||{}));
-  console.log('Force save data size:', JSON.stringify(clean).length, 'chars');
-  
-  if(out) out.innerHTML += '<br><b>Force saving '+playerCount+' players...</b>';
-  
-  // Try writing just the players object first to isolate issues
-  window.__fbSet(window.__fbRef(window.__db,'tsvgd/players'), clean.players||{})
+
+  // Strip photo dataURLs and profile photos before Firebase write
+  var fbClean = JSON.parse(JSON.stringify(clean));
+  if(fbClean.photos){
+    Object.keys(fbClean.photos).forEach(function(album){
+      Object.keys(fbClean.photos[album]||{}).forEach(function(pid){
+        if(fbClean.photos[album][pid]) delete fbClean.photos[album][pid].dataURL;
+      });
+    });
+  }
+  if(fbClean.profiles){
+    Object.keys(fbClean.profiles).forEach(function(p){
+      if(fbClean.profiles[p]) delete fbClean.profiles[p].photoURL;
+    });
+  }
+
+  var dataSize = JSON.stringify(fbClean).length;
+  console.log('Force save: attempting to write', playerCount, 'players:', Object.keys(fbClean.players||{}));
+  console.log('Force save data size (after stripping photos):', dataSize, 'chars');
+  if(out) out.innerHTML += '<br><b>Force saving '+playerCount+' players (data: '+(dataSize/1024).toFixed(0)+'KB)...</b>';
+
+  window.__fbSet(window.__fbRef(window.__db,'tsvgd/players'), fbClean.players||{})
     .then(function(){
       console.log('Players write OK ✅');
       if(out) out.innerHTML += '<br>✅ Players written OK';
-      // Now write pins
-      return window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins'), clean.pins||{});
+      return window.__fbSet(window.__fbRef(window.__db,'tsvgd/pins'), fbClean.pins||{});
     })
     .then(function(){
       console.log('Pins write OK ✅');
       if(out) out.innerHTML += '<br>✅ Pins written OK';
-      // Now write everything else
-      var rest = {};
-      Object.keys(clean).forEach(function(k){
-        if(k !== 'players' && k !== 'pins') rest[k] = clean[k];
-      });
-      return window.__fbSet(window.__fbRef(window.__db,'tsvgd'), Object.assign({}, clean));
+      return window.__fbSet(window.__fbRef(window.__db,'tsvgd'), fbClean);
     })
     .then(function(){
       console.log('Full save OK ✅');
@@ -5232,7 +5263,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.8.0';
+var APP_VERSION = 'v1.8.1';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
