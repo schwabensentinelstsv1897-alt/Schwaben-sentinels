@@ -648,7 +648,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.1</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.3</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -892,7 +892,9 @@ textarea.form-input{resize:vertical;min-height:80px}
     <button class="tab" id="tab-matches" onclick="switchTab('matches',this)">🏏 Matches</button>
     <button class="tab" id="tab-team" onclick="switchTab('team',this)">👥 Team</button>
     <button class="tab" id="tab-photos" onclick="switchTab('photos',this)">📸 Photos <span style="font-size:9px;color:var(--gold);vertical-align:middle">soon</span></button>
+    <button class="tab" id="tab-help" onclick="switchTab('help',this)">❓ Help</button>
     <button class="tab" id="tab-bugs" onclick="switchTab('bugs',this)">🐛 Bugs</button>
+    <button class="tab" id="tab-help" onclick="switchTab('help',this)">❓ Help</button>
     <button class="tab" id="tab-admin" onclick="switchTab('admin',this)">⚙️ Admin</button>
   </div>
   <!-- Mobile dropdown -->
@@ -926,7 +928,9 @@ textarea.form-input{resize:vertical;min-height:80px}
       <button class="mobile-more-item" id="mmi-matches" onclick="switchTab('matches',null);toggleMoreDrawer()"><span class="mmi-icon">📋</span> Matches</button>
       <button class="mobile-more-item" id="mmi-team" onclick="switchTab('team',null);toggleMoreDrawer()"><span class="mmi-icon">👥</span> Team</button>
       <button class="mobile-more-item" id="mmi-photos" onclick="switchTab('photos',null);toggleMoreDrawer()" style="opacity:.7"><span class="mmi-icon">📸</span> Photos <span style="font-size:10px;color:var(--gold);margin-left:4px">soon</span></button>
+      <button class="mobile-more-item" id="mmi-help" onclick="switchTab('help',null);toggleMoreDrawer()"><span class="mmi-icon">❓</span> Help</button>
       <button class="mobile-more-item" id="mmi-bugs" onclick="switchTab('bugs',null);toggleMoreDrawer()"><span class="mmi-icon">🐛</span> Report Bug</button>
+      <button class="mobile-more-item" id="mmi-help" onclick="switchTab('help',null);toggleMoreDrawer()"><span class="mmi-icon">❓</span> Help</button>
       <button class="mobile-more-item" id="mmi-admin" onclick="switchTab('admin',null);toggleMoreDrawer()"><span class="mmi-icon">⚙️</span> Admin</button>
     </div>
   </div>
@@ -1127,6 +1131,202 @@ textarea.form-input{resize:vertical;min-height:80px}
       <div id="my-bug-reports" style="margin-top:20px"></div>
     </div>
 
+      <!-- HELP PANEL -->
+    <div class="panel" id="panel-help">
+      <div class="sec-hdr">
+        <div class="sec-title">❓ Help & Guide</div>
+      </div>
+
+      <!-- Quick start card -->
+      <div style="background:var(--deep);border:2px solid var(--gold);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">🏏</div>
+        <div style="font-family:Bebas Neue,cursive;font-size:20px;letter-spacing:2px;color:var(--gold);margin-bottom:4px">Schwaben Sentinels</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Player Availability App</div>
+        <div style="font-size:11px;color:var(--green2);font-family:JetBrains Mono,monospace">schwabensentinelstsv1897-alt.github.io/Schwaben-sentinels/</div>
+      </div>
+
+      <!-- Section: First Login -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">1. First Time Login</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:flex-start;gap:10px"><span style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</span><span style="font-size:13px;color:var(--text)">Select your name from the dropdown</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><span style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">2</span><span style="font-size:13px;color:var(--text)">Enter the <b style="color:var(--gold)">temporary PIN</b> given to you by the admin</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><span style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</span><span style="font-size:13px;color:var(--text)">Set your own <b style="color:var(--gold)">4-digit PIN</b> — remember this!</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><span style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">4</span><span style="font-size:13px;color:var(--text)">Confirm your PIN — you are in ✅</span></div>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(200,168,75,.1);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;font-size:12px;color:var(--muted)">Next time: select name → enter your PIN → done.</div>
+      </div>
+
+      <!-- Section: Weekly Tasks -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">2. What to Do Each Week</div>
+        <div style="font-size:12px;font-weight:600;color:var(--soft);margin-bottom:8px">Mark Your Match Availability</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:10px">Go to <b style="color:var(--gold)">50 Overs</b> or <b style="color:var(--gold)">T20</b> tab and for every match tap:</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(26,107,60,.15);border-radius:8px;border:1px solid rgba(26,107,60,.3)"><span style="font-size:16px">✓</span><div><div style="font-size:13px;font-weight:600;color:var(--yes-t)">Available</div><div style="font-size:11px;color:var(--muted)">You can play — great!</div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(138,107,26,.15);border-radius:8px;border:1px solid rgba(138,107,26,.3)"><span style="font-size:16px">?</span><div><div style="font-size:13px;font-weight:600;color:var(--maybe-t)">Maybe</div><div style="font-size:11px;color:var(--muted)">You are unsure — add a reason if possible</div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(122,26,26,.15);border-radius:8px;border:1px solid rgba(122,26,26,.3)"><span style="font-size:16px">✗</span><div><div style="font-size:13px;font-weight:600;color:var(--no-t)">Unavailable</div><div style="font-size:11px;color:var(--muted)">You cannot play — add a reason so the team knows</div></div></div>
+        </div>
+        <div style="padding:8px 12px;background:rgba(122,26,26,.1);border-left:3px solid var(--no);border-radius:0 6px 6px 0;font-size:12px;color:var(--no-t)">⚠️ Availability locks <b>16 days before</b> the match. Mark early — you cannot change it after lock.</div>
+        <div style="margin-top:12px;font-size:12px;font-weight:600;color:var(--soft);margin-bottom:6px">Also check weekly:</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:13px;color:var(--text)">🏋 <b>Practice</b> tab — respond to upcoming sessions</div>
+          <div style="font-size:13px;color:var(--text)">🏏 <b>Friendly</b> tab — mark availability for friendly matches</div>
+        </div>
+      </div>
+
+      <!-- Section: Tabs -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">3. What Each Tab Does</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">🏏</span><div><b style="color:var(--text)">50 Overs / T20</b> <span style="font-size:12px;color:var(--muted)">— Mark your match availability</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">🏏</span><div><b style="color:var(--text)">Friendly</b> <span style="font-size:12px;color:var(--muted)">— Non-league matches</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">🏋</span><div><b style="color:var(--text)">Practice</b> <span style="font-size:12px;color:var(--muted)">— Practice sessions & attendance</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">📊</span><div><b style="color:var(--text)">Overview</b> <span style="font-size:12px;color:var(--muted)">— Full grid of all players across all matches</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">🕐</span><div><b style="color:var(--text)">Activity</b> <span style="font-size:12px;color:var(--muted)">— Live feed of availability changes</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">📋</span><div><b style="color:var(--text)">Matches</b> <span style="font-size:12px;color:var(--muted)">— Results, scorecards, standings</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">👥</span><div><b style="color:var(--text)">Team</b> <span style="font-size:12px;color:var(--muted)">— Player profiles, roles, career stats</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">🐛</span><div><b style="color:var(--text)">Bugs</b> <span style="font-size:12px;color:var(--muted)">— Report issues or suggest features</span></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0">⚙️</span><div><b style="color:var(--text)">Admin</b> <span style="font-size:12px;color:var(--muted)">— Admin only: manage players & settings</span></div></div>
+        </div>
+      </div>
+
+      <!-- Section: Profile -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">4. Your Profile</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:8px">Go to <b style="color:var(--gold)">Team</b> tab → find yourself → <b>▼ More details</b> → <b>✏️ Edit Profile</b></div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:13px;color:var(--text)">• Add jersey number, batting/bowling style</div>
+          <div style="font-size:13px;color:var(--text)">• Add contact and emergency contact</div>
+          <div style="font-size:13px;color:var(--text)">• 📷 Upload your profile photo</div>
+          <div style="font-size:13px;color:var(--text)">• 🔐 Change your PIN or password</div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">Only you and the admin can edit your profile.</div>
+      </div>
+
+      <!-- Section: Tips -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">5. Tips</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:13px;color:var(--text)">📱 Works on mobile — add to your home screen for quick access</div>
+          <div style="font-size:13px;color:var(--text)">📊 The progress bar shows your overall response rate</div>
+          <div style="font-size:13px;color:var(--text)">🔔 Login reminder tells you which matches need your response</div>
+          <div style="font-size:13px;color:var(--text)">🔒 Mark availability early — it locks 16 days before match day</div>
+          <div style="font-size:13px;color:var(--text)">🐛 Use the Bugs tab to report problems directly to admin</div>
+          <div style="font-size:13px;color:var(--text)">🔄 Data syncs in real time — everyone sees the same information</div>
+        </div>
+      </div>
+
+    </div>
+
+      <!-- HELP PANEL -->
+    <div class="panel" id="panel-help">
+      <div class="sec-hdr">
+        <div class="sec-title">❓ Help & Guide</div>
+      </div>
+
+      <!-- First Login -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">🔐 First Time Login</div>
+        <ol style="margin:0;padding-left:20px;color:var(--text);font-size:13px;line-height:2">
+          <li>Open the app link on your phone or computer</li>
+          <li>Select your <strong style="color:var(--gold)">name</strong> from the dropdown</li>
+          <li>Enter the <strong style="color:var(--gold)">temporary PIN</strong> given by the admin</li>
+          <li>Set your own <strong style="color:var(--gold)">4-digit PIN</strong> — remember this!</li>
+          <li>You're in ✅</li>
+        </ol>
+        <div style="margin-top:10px;padding:8px 12px;background:var(--deep);border-radius:8px;font-size:12px;color:var(--soft)">
+          💡 Next time: select name → enter your PIN → done.
+        </div>
+      </div>
+
+      <!-- Weekly routine -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">📅 What To Do Each Week</div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--yes-t);margin-bottom:6px">✅ Mark Your Availability</div>
+          <ul style="margin:0;padding-left:18px;color:var(--text);font-size:13px;line-height:1.9">
+            <li>Tap <strong>50 Overs</strong> or <strong>T20</strong> tab</li>
+            <li>For each match tap: <strong>Available / Maybe / Unavailable</strong></li>
+            <li>If Maybe or Unavailable — add a reason (helps the captain plan)</li>
+            <li>Do this <strong style="color:var(--gold)">as early as possible</strong> — matches lock 16 days before match day</li>
+          </ul>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--soft);margin-bottom:6px">🏋 Practice Sessions</div>
+          <ul style="margin:0;padding-left:18px;color:var(--text);font-size:13px;line-height:1.9">
+            <li>Tap <strong>Practice</strong> tab to see upcoming sessions</li>
+            <li>Mark Available / Maybe / Unavailable for each session</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--soft);margin-bottom:6px">🏏 Friendly Matches</div>
+          <ul style="margin:0;padding-left:18px;color:var(--text);font-size:13px;line-height:1.9">
+            <li>Tap <strong>Friendly</strong> tab — mark availability same as league matches</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab reference -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">📱 Tab Reference</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">
+          ${[
+            ['📊','Overview','Full grid — all players × all matches at a glance'],
+            ['🕐','Activity','Who changed their availability and when'],
+            ['📋','Matches','Results, scorecards, standings, H2H'],
+            ['👥','Team','Profiles, roles, achievements, career stats'],
+            ['📸','Photos','Coming soon — match & team photos'],
+            ['🐛','Bugs','Report issues or suggest features'],
+          ].map(function(r){ return '<div style="background:var(--deep);border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div style="font-size:13px;margin-bottom:2px"><span style="margin-right:6px">'+r[0]+'</span><strong style="color:var(--gold)">'+r[1]+'</strong></div><div style="font-size:11px;color:var(--muted)">'+r[2]+'</div></div>'; }).join('')}
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">👤 Your Profile</div>
+        <ul style="margin:0;padding-left:18px;color:var(--text);font-size:13px;line-height:2">
+          <li>Go to <strong>Team</strong> tab → find yourself → <strong>▼ More details</strong></li>
+          <li>Click <strong>✏️ Edit Profile</strong> — add jersey number, batting/bowling style, contact</li>
+          <li>Click <strong>📷 Update photo</strong> to set your profile picture</li>
+          <li>Click <strong>🔐 Change PIN/Password</strong> to update your security</li>
+        </ul>
+      </div>
+
+      <!-- Tips -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">💡 Tips</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[
+            ['🔔','Login reminder shows which matches still need your response'],
+            ['📊','Progress bar at the top tracks your overall response rate'],
+            ['🔒','Availability locks 16 days before match day — mark early!'],
+            ['📱','Works like an app on mobile — add to your home screen for quick access'],
+            ['🐛','Use the Bugs tab to report issues or request new features'],
+            ['🌐','All data syncs in real time — changes visible instantly on all devices'],
+          ].map(function(r){ return '<div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:16px;flex-shrink:0">'+r[0]+'</span><span style="font-size:13px;color:var(--text)">'+r[1]+'</span></div>'; }).join('')}
+        </div>
+      </div>
+
+      <!-- Admin -->
+      <div style="background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.2);border-radius:12px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">⚙️ For Admins Only</div>
+        <ul style="margin:0;padding-left:18px;color:var(--text);font-size:13px;line-height:2">
+          <li>Add / remove players and reset PINs (auto-generated, visible in admin panel)</li>
+          <li>Create practice sessions and friendly matches</li>
+          <li>Assign roles (Captain, Vice Captain, Scorer…) and achievement badges</li>
+          <li>Enter match results, scorecards and Man of the Match</li>
+          <li>Export data to Excel / PDF</li>
+          <li>View and respond to bug reports from players</li>
+          <li>Manage practice grounds and app settings</li>
+        </ul>
+      </div>
+
+      <div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">
+        Any questions? Use the 🐛 <strong style="color:var(--gold)">Bugs</strong> tab or contact <strong style="color:var(--gold)">iPrade</strong> directly.
+      </div>
+    </div>
+
       <!-- ADMIN PANEL -->
     <div class="panel" id="panel-admin">
         <div id="admin-lock">
@@ -1295,7 +1495,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.1</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.3</span></div>
   </div>
 </div>
 
@@ -1377,7 +1577,7 @@ const FRIENDLY_FORMATS=['T20','50 Overs','40 Overs','30 Overs','Other'];
 const sColors={yes:'#7ae89e',maybe:'#e8c96a',no:'#e87a7a'};
 const sLabels={yes:'Available',maybe:'Maybe',no:'Unavailable'};
 const sEmoji={yes:'✓',maybe:'?',no:'✗',pending:'-'};
-const tabLabels={'50overs':'50 Overs - Verbandsliga','t20':'T20 - Verbandsliga','friendly':'Friendly Matches','practice':'Practice','overview':'Overview','activity':'Activity','admin':'Admin','bugs':'Report a Bug','photos':'Photos','matches':'Matches','team':'Team'};
+const tabLabels={'50overs':'50 Overs - Verbandsliga','t20':'T20 - Verbandsliga','friendly':'Friendly Matches','practice':'Practice','overview':'Overview','activity':'Activity','admin':'Admin','bugs':'Report a Bug','help':'Help & Guide','help':'Help & Guide','photos':'Photos','matches':'Matches','team':'Team'};
 const ADMIN_KEY='tsvgd-admin-pin';
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1837,9 +2037,30 @@ function refreshDefaultGroundDropdown(){
 }
 
 function loadSettingsIntoForm(){
-  const s=getSettings();
-  const wt=document.getElementById('warn-threshold');const dg=document.getElementById('default-ground');
-  if(wt)wt.value=s.warnThreshold||3;if(dg)dg.value=s.defaultGround||'';
+  var s = getSettings();
+  var wt = document.getElementById('warn-threshold');
+  var tn = document.getElementById('setting-team-name');
+  var se = document.getElementById('setting-season');
+  var ig = document.getElementById('setting-instagram');
+  var th = document.getElementById('setting-theme');
+  if(wt) wt.value = s.warnThreshold || 3;
+  if(tn) tn.value = s.teamName || '';
+  if(se) se.value = s.activeSeason || '2026';
+  if(ig) ig.value = s.instagramHandle || '';
+  if(th) th.value = s.theme || 'green';
+  // Default ground — match by index first, fallback by name
+  refreshDefaultGroundDropdown();
+  var dg = document.getElementById('default-ground');
+  if(dg){
+    if(s.defaultGroundIdx !== undefined && s.defaultGroundIdx !== null){
+      dg.value = String(s.defaultGroundIdx);
+    } else if(s.defaultGround){
+      // find by name
+      var grounds = getGrounds();
+      var idx = grounds.findIndex(function(g){ return g.name === s.defaultGround; });
+      if(idx >= 0) dg.value = String(idx);
+    }
+  }
 }
 
 function showToast(msg){
@@ -5455,7 +5676,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.0.1';
+var APP_VERSION = 'v2.0.3';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
