@@ -632,7 +632,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.7.6</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v1.7.7</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1071,6 +1071,14 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
         <div id="admin-dashboard" style="display:none">
+          <!-- Firebase Diagnostics Banner -->
+          <div id="fb-diag-banner" style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+              <div style="font-weight:700;color:var(--gold);letter-spacing:1px;font-size:12px;text-transform:uppercase">🔥 Firebase Status</div>
+              <button onclick="runFbDiag()" style="background:var(--green);color:#fff;border:none;padding:5px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:Outfit,sans-serif">Run Test</button>
+            </div>
+            <div id="fb-diag-output" style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--soft);line-height:1.8">Click Run Test to check Firebase connection</div>
+          </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
             <div>
               <div class="sec-title">Admin Panel</div>
@@ -1214,7 +1222,7 @@ body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);mi
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.7.6</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v1.7.7</span></div>
   </div>
 </div>
 
@@ -4110,6 +4118,107 @@ function updateStorageBar(){
 
 
 
+
+// ─── FIREBASE DIAGNOSTICS ─────────────────────────────────────────────────────
+function runFbDiag(){
+  var out = document.getElementById('fb-diag-output');
+  if(!out) return;
+  var lines = [];
+  var ok = '<span style="color:var(--green2)">✅</span>';
+  var err = '<span style="color:var(--no-t)">❌</span>';
+  var warn = '<span style="color:var(--maybe-t)">⚠️</span>';
+
+  lines.push('<b>Checking Firebase...</b>');
+  out.innerHTML = lines.join('<br>');
+
+  // Basic checks
+  lines.push((window.__fbReady ? ok : err) + ' Firebase module loaded: ' + (window.__fbReady ? 'YES' : 'NO'));
+  lines.push((window.__db ? ok : err) + ' Database connected: ' + (window.__db ? 'YES' : 'NO'));
+  lines.push((window.__fbSet ? ok : err) + ' Write (set): ' + (window.__fbSet ? 'available' : 'MISSING'));
+  lines.push((window.__fbUpdate ? ok : err) + ' Write (update): ' + (window.__fbUpdate ? 'available' : 'MISSING'));
+  lines.push((window.__fbGet ? ok : err) + ' Read (get): ' + (window.__fbGet ? 'available' : 'MISSING'));
+  lines.push((window.__fbOnValue ? ok : err) + ' Realtime (onValue): ' + (window.__fbOnValue ? 'available' : 'MISSING'));
+
+  var playerCount = Object.keys(sharedData.players||{}).length;
+  lines.push((playerCount > 0 ? ok : warn) + ' sharedData players in memory: ' + playerCount);
+
+  var lsRaw = null;
+  try{ lsRaw = JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch(e){}
+  var lsCount = lsRaw ? Object.keys(lsRaw.players||{}).length : 0;
+  lines.push((lsCount > 0 ? ok : warn) + ' localStorage players: ' + lsCount);
+
+  out.innerHTML = lines.join('<br>');
+
+  if(!window.__fbReady || !window.__db){
+    lines.push(err + ' Cannot test — Firebase not connected');
+    out.innerHTML = lines.join('<br>');
+    return;
+  }
+
+  // Test READ
+  lines.push('<br><b>Testing Firebase READ...</b>');
+  out.innerHTML = lines.join('<br>');
+  window.__fbGet(window.__fbRef(window.__db,'tsvgd'))
+    .then(function(snap){
+      var fbData = snap.val();
+      var fbCount = fbData ? Object.keys(fbData.players||{}).length : 0;
+      var fbPlayers = fbData ? Object.keys(fbData.players||{}) : [];
+      lines.push(ok + ' READ OK — Firebase has <b>' + fbCount + ' players</b>: ' + fbPlayers.join(', '));
+      out.innerHTML = lines.join('<br>');
+
+      // Check for discrepancy
+      if(fbCount !== playerCount){
+        lines.push(warn + ' MISMATCH: memory has ' + playerCount + ' but Firebase has ' + fbCount);
+      }
+
+      // Test WRITE
+      lines.push('<br><b>Testing Firebase WRITE...</b>');
+      out.innerHTML = lines.join('<br>');
+      var testKey = '_diag_' + Date.now();
+      var testVal = {ts: new Date().toISOString(), from: 'admin-diag'};
+      var updates = {};
+      updates[testKey] = testVal;
+      return window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), updates)
+        .then(function(){
+          lines.push(ok + ' WRITE OK — test key written successfully');
+          out.innerHTML = lines.join('<br>');
+          // Clean up test key
+          var cleanUpdates = {};
+          cleanUpdates[testKey] = null;
+          return window.__fbUpdate(window.__fbRef(window.__db,'tsvgd'), cleanUpdates);
+        })
+        .then(function(){
+          lines.push(ok + ' CLEANUP OK — test key deleted');
+          lines.push('<br><b style="color:var(--green2)">Firebase is working correctly ✅</b>');
+          if(fbCount < playerCount){
+            lines.push(warn + ' ' + (playerCount-fbCount) + ' player(s) in memory not in Firebase — try Save All below');
+            lines.push('<button onclick="forceSaveAllToFirebase()" style="background:var(--gold);color:#000;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:6px;font-family:Outfit,sans-serif">💾 Force Save All Players to Firebase</button>');
+          }
+          out.innerHTML = lines.join('<br>');
+        });
+    })
+    .catch(function(e){
+      lines.push(err + ' FAILED: ' + e.message);
+      lines.push(warn + ' This usually means Firebase Rules are blocking access');
+      lines.push('👉 Go to Firebase Console → Realtime Database → Rules → set read/write to <b>true</b>');
+      out.innerHTML = lines.join('<br>');
+    });
+}
+
+function forceSaveAllToFirebase(){
+  if(!window.__fbReady || !window.__db || !window.__fbSet) return;
+  showToast('Force saving all data to Firebase...');
+  var clean = removeUndefined(sharedData);
+  window.__fbSet(window.__fbRef(window.__db,'tsvgd'), clean)
+    .then(function(){
+      showToast('Force save complete ✅ — ' + Object.keys(clean.players||{}).length + ' players saved');
+      runFbDiag();
+    })
+    .catch(function(e){
+      showToast('Force save FAILED: ' + e.message);
+    });
+}
+
 function getAllAchievements(){
   var custom = sharedData.customAchievements || [];
   return BUILT_IN_ACHIEVEMENTS.concat(custom);
@@ -5079,7 +5188,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v1.7.6';
+var APP_VERSION = 'v1.7.7';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
