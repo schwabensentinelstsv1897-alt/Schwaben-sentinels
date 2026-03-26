@@ -15,6 +15,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "AIzaSyCVUaO2Dn_u-Khmu71EgOTE3MSvN1oFHWI",
     authDomain: "schwaben-sentinels.firebaseapp.com",
@@ -37,10 +38,19 @@
       window.__fbGet = get;
       window.__fbOnValue = onValue;
       window.__fbUpdate = update;
-      window.__fbReady = true;
-      console.log('Firebase ready ✅');
-      // Dispatch event so main script knows Firebase is ready
-      window.dispatchEvent(new Event('firebaseReady'));
+      console.log('Firebase DB ready, signing in anonymously...');
+      // Anonymous Auth — required for auth != null rules
+      const auth = getAuth(app);
+      window.__fbAuth = auth;
+      signInAnonymously(auth).then(function(){
+        console.log('Firebase Auth: anonymous sign-in OK ✅');
+        window.__fbReady = true;
+        window.dispatchEvent(new Event('firebaseReady'));
+      }).catch(function(e){
+        console.warn('Anonymous auth failed, running without auth:', e.message);
+        window.__fbReady = true;
+        window.dispatchEvent(new Event('firebaseReady'));
+      });
     }
   } catch(e){
     console.error('Firebase init failed:', e);
@@ -636,6 +646,14 @@ textarea.form-input{resize:vertical;min-height:80px}
 .offline-bar{background:rgba(122,26,26,.2);border:1px solid rgba(122,26,26,.3);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--no-t);margin-bottom:12px;display:none}
 .saving-badge{position:fixed;bottom:80px;right:16px;background:var(--green);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;z-index:300;pointer-events:none}
 .saving-badge.show{opacity:1}
+
+.squad-pos-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;margin-left:6px;font-family:JetBrains Mono,monospace}
+.squad-pos-badge.confirmed{background:rgba(26,107,60,.3);color:var(--yes-t);border:1px solid rgba(26,107,60,.5)}
+.squad-pos-badge.waitlisted{background:rgba(138,107,26,.25);color:var(--maybe-t);border:1px solid rgba(138,107,26,.4)}
+.squad-bar{margin-top:10px;padding:8px 0 4px}
+.squad-bar-inner{height:6px;background:var(--deep);border-radius:3px;overflow:hidden;position:relative;margin-bottom:6px}
+.squad-confirmed-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:3px;transition:width .4s}
+.squad-bar-labels{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -648,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.5</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.0.7</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -894,7 +912,6 @@ textarea.form-input{resize:vertical;min-height:80px}
     <button class="tab" id="tab-photos" onclick="switchTab('photos',this)">📸 Photos <span style="font-size:9px;color:var(--gold);vertical-align:middle">soon</span></button>
     <button class="tab" id="tab-help" onclick="switchTab('help',this)">❓ Help</button>
     <button class="tab" id="tab-bugs" onclick="switchTab('bugs',this)">🐛 Bugs</button>
-    <button class="tab" id="tab-help" onclick="switchTab('help',this)">❓ Help</button>
     <button class="tab" id="tab-admin" onclick="switchTab('admin',this)">⚙️ Admin</button>
   </div>
   <!-- Mobile dropdown -->
@@ -1213,6 +1230,39 @@ textarea.form-input{resize:vertical;min-height:80px}
         </div>
       </div>
 
+      <!-- Section: Install as App -->
+      <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">6. Save as App on Your Phone</div>
+
+        <!-- iPhone -->
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:20px">🍎</span>
+            <span style="font-size:13px;font-weight:600;color:var(--soft)">iPhone / iPad (iOS)</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding-left:28px">
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">1</span><span style="font-size:13px;color:var(--text)">Open this page in <b style="color:var(--gold)">Safari</b> (not Chrome)</span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">2</span><span style="font-size:13px;color:var(--text)">Tap the <b style="color:var(--gold)">Share button</b> ↑ at the bottom</span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">3</span><span style="font-size:13px;color:var(--text)">Scroll down and tap <b style="color:var(--gold)">"Add to Home Screen"</b></span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">4</span><span style="font-size:13px;color:var(--text)">Tap <b style="color:var(--gold)">Add</b> — done! ✅</span></div>
+          </div>
+        </div>
+
+        <!-- Android -->
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:20px">🤖</span>
+            <span style="font-size:13px;font-weight:600;color:var(--soft)">Android (Chrome)</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding-left:28px">
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">1</span><span style="font-size:13px;color:var(--text)">Open this page in <b style="color:var(--gold)">Chrome</b></span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">2</span><span style="font-size:13px;color:var(--text)">Tap the <b style="color:var(--gold)">three dots menu ⋮</b> top right</span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">3</span><span style="font-size:13px;color:var(--text)">Tap <b style="color:var(--gold)">"Add to Home screen"</b></span></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="background:var(--green);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">4</span><span style="font-size:13px;color:var(--text)">Tap <b style="color:var(--gold)">Add</b> — done! ✅</span></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
       <!-- HELP PANEL -->
@@ -1409,6 +1459,13 @@ textarea.form-input{resize:vertical;min-height:80px}
                 </div>
               </div>
               <div class="form-field">
+                <label class="form-label">Squad Size</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input class="form-input" id="squad-size" type="number" min="1" max="20" value="14" style="width:70px;flex-shrink:0" />
+                  <span style="font-size:12px;color:var(--muted);white-space:nowrap">players</span>
+                </div>
+              </div>
+              <div class="form-field">
                 <label class="form-label">Default Practice Ground</label>
                 <select class="form-input" id="default-ground">
                   <option value="">None</option>
@@ -1491,7 +1548,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.5</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.0.7</span></div>
   </div>
 </div>
 
@@ -2026,6 +2083,7 @@ function saveSettings(){
   var theme=themeEl?themeEl.value:'green';
   sharedData.settings={
     warnThreshold:parseInt(document.getElementById('warn-threshold').value)||3,
+    squadSize:parseInt(document.getElementById('squad-size').value)||14,
     defaultGround:dgName||'',
     defaultGroundIdx:dgIdx!==undefined?dgIdx:null,
     teamName:teamName||'TSV Grossdeinbach',
@@ -2065,6 +2123,8 @@ function loadSettingsIntoForm(){
   var ig = document.getElementById('setting-instagram');
   var th = document.getElementById('setting-theme');
   if(wt) wt.value = s.warnThreshold || 3;
+  var sq = document.getElementById('squad-size');
+  if(sq) sq.value = s.squadSize || 14;
   if(tn) tn.value = s.teamName || '';
   if(se) se.value = s.activeSeason || '2026';
   if(ig) ig.value = s.instagramHandle || '';
@@ -2454,10 +2514,15 @@ function buildCard(league,idx,match,matchId){
     var o={'yes':0,'maybe':1,'no':2};
     return (o[a.status]!==undefined?o[a.status]:3)-(o[b.status]!==undefined?o[b.status]:3);
   });
+  var squadPos2 = getSquadPositions(league, idx);
   var playerRows=sorted.map(function(p){
+    var pPos = squadPos2[p.name];
+    var posBadge = pPos ? (pPos.confirmed
+      ? ' <span class="squad-pos-badge confirmed" style="font-size:10px;padding:1px 6px">'+pPos.label+'</span>'
+      : ' <span class="squad-pos-badge waitlisted" style="font-size:10px;padding:1px 6px">'+pPos.label+'</span>') : '';
     return '<div class="ov-row">'
       +'<div class="ov-dot '+(p.status||'pending')+'"></div>'
-      +'<div class="ov-name" style="color:'+(p.name===currentPlayer?'#c8a84b':'#e8f2ec')+'">'+esc(p.name)+(p.name===currentPlayer?' (you)':'')+'</div>'
+      +'<div class="ov-name" style="color:'+(p.name===currentPlayer?'#c8a84b':'#e8f2ec')+'">'+esc(p.name)+(p.name===currentPlayer?' (you)':'')+posBadge+'</div>'
       +(p.status?'<div class="ov-status" style="color:'+sColors[p.status]+'">'+sLabels[p.status]+'</div>':'')
       +(p.reason?'<div class="ov-reason">- '+esc(p.reason)+'</div>':'')
       +'</div>';
@@ -2476,11 +2541,44 @@ function buildCard(league,idx,match,matchId){
       +'</div>';
   } else {
     var lgq=league;var idxq=idx;
+    var squadPos = getSquadPositions(league, idx);
+    var myPos = squadPos[currentPlayer];
+    var squadSize = getSquadSize();
+
+    // Squad status bar
+    var yesCount = Object.values(squadPos).length;
+    var confirmedCount = Object.values(squadPos).filter(function(p){ return p.confirmed; }).length;
+    var waitCount = yesCount - confirmedCount;
+    var spotsLeft = Math.max(0, squadSize - confirmedCount);
+
+    var squadBarHtml = '<div class="squad-bar">'
+      + '<div class="squad-bar-inner">'
+      + '<div class="squad-confirmed-fill" style="width:'+Math.min(100,Math.round(confirmedCount/squadSize*100))+'%"></div>'
+      + '</div>'
+      + '<div class="squad-bar-labels">'
+      + '<span style="font-size:11px;color:var(--yes-t);font-weight:600">'+confirmedCount+'/'+squadSize+' confirmed</span>'
+      + (spotsLeft > 0 ? '<span style="font-size:11px;color:var(--muted)">'+spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left</span>' : '')
+      + (waitCount > 0 ? '<span style="font-size:11px;color:var(--maybe-t)">'+waitCount+' waiting</span>' : '')
+      + '</div>'
+      + '</div>';
+
+    // My position badge
+    var myPosBadge = '';
+    if(myPos){
+      if(myPos.confirmed){
+        myPosBadge = '<span class="squad-pos-badge confirmed">'+myPos.label+'</span>';
+      } else {
+        myPosBadge = '<span class="squad-pos-badge waitlisted">'+myPos.label+'</span>';
+      }
+    }
+
     availHtml='<div class="avail-btns">'
       +'<button class="abtn abtn-yes '+(my.status==='yes'?'active':'')+'" data-l="'+league+'" data-i="'+idx+'" data-s="yes" onclick="setStatus(this.dataset.l,this.dataset.i,this.dataset.s)">Available</button>'
       +'<button class="abtn abtn-maybe '+(my.status==='maybe'?'active':'')+'" data-l="'+league+'" data-i="'+idx+'" data-s="maybe" onclick="setStatus(this.dataset.l,this.dataset.i,this.dataset.s)">Maybe</button>'
       +'<button class="abtn abtn-no '+(my.status==='no'?'active':'')+'" data-l="'+league+'" data-i="'+idx+'" data-s="no" onclick="setStatus(this.dataset.l,this.dataset.i,this.dataset.s)">Unavailable</button>'
-      +'</div>';
+      +myPosBadge
+      +'</div>'
+      + squadBarHtml;
     if(showEx){
       availHtml+='<div class="extra-fields">'
         +'<input class="extra-input" placeholder="Reason..." value="'+esc(my.reason||'')+'" data-l="'+league+'" data-i="'+idx+'" data-f="reason" onchange="setField(this.dataset.l,this.dataset.i,this.dataset.f,this.value)" />'
@@ -5711,7 +5809,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.0.5';
+var APP_VERSION = 'v2.0.7';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -7051,6 +7149,45 @@ function deleteBugReport(id){
   fbWrite('bugReports/' + id, null);
   renderAdminBugReports();
   showToast('Report deleted.');
+}
+
+
+// ─── SQUAD / FIRST-COME-FIRST-SERVE ──────────────────────────────────────────
+function getSquadSize(){
+  return (sharedData.settings && sharedData.settings.squadSize) || 14;
+}
+
+function getSquadPositions(league, idx){
+  var key = league + '_' + idx;
+  var squadSize = getSquadSize();
+  var players = Object.keys(sharedData.players || {});
+
+  // Get all players who said YES, sorted by lastEdit ascending (earliest = higher priority)
+  var yesPlayers = players
+    .map(function(p){
+      var d = (sharedData.players[p] || {})[key] || {};
+      return { name: p, status: d.status, lastEdit: d.lastEdit || '9999' };
+    })
+    .filter(function(p){ return p.status === 'yes'; })
+    .sort(function(a, b){ return a.lastEdit.localeCompare(b.lastEdit); });
+
+  var result = {};
+  yesPlayers.forEach(function(p, i){
+    if(i < squadSize){
+      result[p.name] = { pos: i + 1, label: '#' + (i + 1), confirmed: true };
+    } else {
+      var wNum = i - squadSize + 1;
+      result[p.name] = { pos: squadSize + wNum, label: 'W' + wNum, confirmed: false, waitNum: wNum };
+    }
+  });
+  return result;
+}
+
+function getMySquadLabel(league, idx){
+  var positions = getSquadPositions(league, idx);
+  var mine = positions[currentPlayer];
+  if(!mine) return null;
+  return mine;
 }
 
 
