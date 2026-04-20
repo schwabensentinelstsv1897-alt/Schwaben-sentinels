@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.3</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.4</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.3</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.4</span></div>
   </div>
 </div>
 
@@ -1820,7 +1820,39 @@ function goToMatch(el){
   setTimeout(function(){scrollToCard(lg,idx);},300);
 }
 
+function ackResetNotices(){
+  if(!sharedData.resetAcks) sharedData.resetAcks = {};
+  if(!sharedData.resetAcks[currentPlayer]) sharedData.resetAcks[currentPlayer] = {};
+  Object.keys(sharedData.matchResets||{}).forEach(function(mid){
+    sharedData.resetAcks[currentPlayer][mid] = true;
+  });
+  fbWrite('resetAcks/'+currentPlayer, sharedData.resetAcks[currentPlayer]);
+  var banner = document.getElementById('reset-notice-banner');
+  if(banner) banner.remove();
+}
+
 function renderLoginReminder(){
+  // Show match reset notices if any
+  var resets = sharedData.matchResets || {};
+  var myResets = Object.values(resets).filter(function(r){
+    return !((sharedData.resetAcks||{})[currentPlayer]||{})[r.matchId];
+  });
+  if(myResets.length > 0){
+    var resetBanner = document.getElementById('reset-notice-banner');
+    if(!resetBanner){
+      resetBanner = document.createElement('div');
+      resetBanner.id = 'reset-notice-banner';
+      resetBanner.style.cssText = 'background:rgba(122,26,26,.15);border:1px solid rgba(122,26,26,.4);border-radius:12px;padding:14px 18px;margin-bottom:12px';
+      var appMain = document.querySelector('.main');
+      if(appMain) appMain.insertBefore(resetBanner, appMain.firstChild);
+    }
+    resetBanner.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--no-t);margin-bottom:8px">⚠️ Match Details Changed</div>'
+      + myResets.map(function(r){
+          return '<div style="font-size:12px;color:var(--soft);margin-bottom:4px">'+esc(r.notice)+'</div>';
+        }).join('')
+      + '<button onclick="ackResetNotices()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Outfit,sans-serif">Got it ✓</button>';
+  }
+
   // Show reminder banner after login if there are pending responses
   var pending50 = getPendingMatches('50overs');
   var pendingt20 = getPendingMatches('t20');
@@ -2705,7 +2737,13 @@ function switchOvLeague(league){
 
 function renderOverview(){
   var league=currentOvLeague;
-  var matches=MATCHES[league];
+  // Use schedule data (includes edits) merged over hardcoded MATCHES
+  var season = getActiveSeason();
+  var schedKey = league+'_'+season;
+  var schedMatches = sharedData.schedule && sharedData.schedule[schedKey]
+    ? Object.values(sharedData.schedule[schedKey]).sort(function(a,b){ return (a.dateISO||'').localeCompare(b.dateISO||''); })
+    : null;
+  var matches = schedMatches && schedMatches.length > 0 ? schedMatches : (MATCHES[league]||[]);
   var players=Object.keys(sharedData.players||{}).sort();
   var wrap=document.getElementById('ov-grid-wrap');
   if(!wrap)return;
@@ -5509,12 +5547,67 @@ function saveMatch(editId){
   var id = editId||('m_'+Date.now());
   var dateFormatted = new Date(dateISO).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('.');
   var address = document.getElementById('am-address')?document.getElementById('am-address').value.trim():'';
-  sharedData.schedule[key][id] = {id:id,day:day,dateISO:dateISO,date:dateFormatted,time:time,league:league,season:season,home:home,away:away,venue:venue,address:address,location:location};
+
+  // Detect if date or venue changed (for availability reset)
+  var isEdit = !!editId;
+  var old = isEdit ? (sharedData.schedule[key][id]||{}) : {};
+  var dateChanged = isEdit && old.dateISO && old.dateISO !== dateISO;
+  var venueChanged = isEdit && old.venue && old.venue !== venue;
+
+  var matchData = {id:id,day:day,dateISO:dateISO,date:dateFormatted,time:time,
+    league:league,season:season,home:home,away:away,venue:venue,address:address,location:location};
+  sharedData.schedule[key][id] = matchData;
+
   if(!sharedData.seasons) sharedData.seasons=['2026'];
   if(sharedData.seasons.indexOf(season)<0) sharedData.seasons.push(season);
+
+  // Write to Firebase directly so all tabs reflect immediately
+  fbWrite('schedule/'+key+'/'+id, matchData);
+
+  // ── Reset availability if date or venue changed ──────────────────────────
+  if(dateChanged || venueChanged){
+    var changeReason = [];
+    if(dateChanged) changeReason.push('date changed to '+dateFormatted);
+    if(venueChanged) changeReason.push('venue changed to '+venue);
+    var notice = '⚠️ '+changeReason.join(' & ')+'. Please re-confirm your availability.';
+
+    // Find match index to reset the right key
+    var matchLeague = league;
+    var hardMatches = MATCHES[matchLeague]||[];
+    var matchIdx = hardMatches.findIndex(function(m){ return m.date===old.date; });
+    // Also check schedule-based idx
+    var schedIdx = Object.keys(sharedData.schedule[key]||{}).indexOf(id);
+
+    // Store reset notice in Firebase for all players to see on next login
+    if(!sharedData.matchResets) sharedData.matchResets = {};
+    sharedData.matchResets[id] = {
+      matchId: id, league: league, key: key,
+      notice: notice, dateFormatted: dateFormatted, venue: venue,
+      resetAt: new Date().toISOString(), resetBy: currentPlayer
+    };
+    fbWrite('matchResets/'+id, sharedData.matchResets[id]);
+
+    // Reset all player availability for this match in schedule
+    var players = Object.keys(sharedData.players||{});
+    players.forEach(function(p){
+      var pd = sharedData.players[p]||{};
+      // For schedule-based matches, key is the match id
+      if(pd[id]){
+        delete sharedData.players[p][id];
+        fbWrite('players/'+p+'/'+id, null);
+      }
+    });
+    showToast('Match updated — player availability reset due to '+changeReason.join(' & '));
+  }
+
   saveData();
   document.getElementById('add-match-modal').remove();
   renderMatchesTab();
+  // Refresh overview if open
+  if(document.getElementById('panel-overview') &&
+     document.getElementById('panel-overview').classList.contains('active')){
+    renderOverview();
+  }
   showToast('Match saved!');
 }
 
@@ -5989,7 +6082,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.1.3';
+var APP_VERSION = 'v2.1.4';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
