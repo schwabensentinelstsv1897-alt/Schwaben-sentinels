@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.4</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.5</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.4</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.5</span></div>
   </div>
 </div>
 
@@ -1818,6 +1818,38 @@ function goToMatch(el){
   var tabEl=document.getElementById("tab-"+lg);
   switchTab(lg,tabEl);
   setTimeout(function(){scrollToCard(lg,idx);},300);
+}
+
+function resetMatchAvailability(matchId, league, silent){
+  if(!silent && !confirm('Reset all player availability for this match? All responses will be cleared and players will be notified.')) return;
+  var season = getActiveSeason();
+  var key = league+'_'+season;
+  var matchData = (sharedData.schedule&&sharedData.schedule[key]&&sharedData.schedule[key][matchId])||{};
+  var players = Object.keys(sharedData.players||{});
+
+  // Clear availability for this match
+  players.forEach(function(p){
+    var pd = sharedData.players[p]||{};
+    // Check both schedule id and legacy idx-based keys
+    Object.keys(pd).forEach(function(k){
+      if(k === matchId || k === league+'_availability_'+matchId){
+        delete sharedData.players[p][k];
+        fbWrite('players/'+p+'/'+k, null);
+      }
+    });
+  });
+
+  // Store reset notice
+  if(!sharedData.matchResets) sharedData.matchResets={};
+  var notice = '⚠️ '+esc(matchData.date||matchId)+' vs '+(matchData.home&&matchData.away?esc(matchData.away||matchData.home):matchId)+' — availability has been reset. Please re-confirm.';
+  sharedData.matchResets[matchId] = {
+    matchId: matchId, league: league, key: key,
+    notice: notice, resetAt: new Date().toISOString(), resetBy: currentPlayer
+  };
+  fbWrite('matchResets/'+matchId, sharedData.matchResets[matchId]);
+  saveData();
+  if(!silent) showToast('Availability reset — players will be notified.');
+  renderMatches(league);
 }
 
 function ackResetNotices(){
@@ -2524,9 +2556,52 @@ function renderMatches(league){
   var countEl=document.getElementById('count-'+league);
   container.innerHTML='';
 
-  // Always use hardcoded MATCHES for availability tabs (reliable, no timing issues)
-  // From next season, admin can manage schedule dynamically via the Matches tab
-  var matchList = MATCHES[league]||[];
+  // Merge hardcoded MATCHES with any schedule edits
+  var season = getActiveSeason();
+  var schedKey = league+'_'+season;
+  var schedData = sharedData.schedule && sharedData.schedule[schedKey] ? sharedData.schedule[schedKey] : {};
+
+  // Build merged list: start from hardcoded MATCHES, overlay schedule edits by day
+  var baseList = MATCHES[league]||[];
+  var matchList = baseList.map(function(m, i){
+    // Find schedule entry that matches this hardcoded match by day label or index
+    var schedId = 'match_'+league+'_'+i;
+    var schedEntry = schedData[schedId] || null;
+    // Also check any schedule entry with same day
+    if(!schedEntry){
+      Object.values(schedData).forEach(function(s){
+        if(s.day && m.day && s.day === m.day) schedEntry = s;
+      });
+    }
+    if(schedEntry){
+      // Override hardcoded data with schedule edits
+      return Object.assign({}, m, {
+        date: schedEntry.date || m.date,
+        dateISO: schedEntry.dateISO || m.dateISO,
+        time: schedEntry.time || m.time,
+        home: schedEntry.home || m.home,
+        away: schedEntry.away || m.away,
+        venue: schedEntry.venue || m.venue,
+        address: schedEntry.address || m.address,
+        location: schedEntry.location || m.location
+      });
+    }
+    return m;
+  });
+
+  // Also add any schedule-only matches (added via + Add Match), skip deleted
+  Object.values(schedData).forEach(function(s){
+    if(s.id && s.id.startsWith('m_') && !s._deleted){
+      matchList.push(s);
+    }
+  });
+  // Apply _deleted flag from schedule to hardcoded matches
+  matchList = matchList.map(function(m, i){
+    var schedId = 'match_'+league+'_'+i;
+    var sd = schedData[schedId] || schedData[m.id] || null;
+    if(sd && sd._deleted) return Object.assign({}, m, {_deleted: true});
+    return m;
+  });
 
   if(matchList.length===0){
     container.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-size:14px">No matches found.</div>';
@@ -2535,6 +2610,7 @@ function renderMatches(league){
   }
 
   matchList.forEach(function(match,idx){
+    if(match._deleted) return; // Skip deleted matches
     container.appendChild(buildCard(league,idx,match,null));
   });
 
@@ -2743,7 +2819,9 @@ function renderOverview(){
   var schedMatches = sharedData.schedule && sharedData.schedule[schedKey]
     ? Object.values(sharedData.schedule[schedKey]).sort(function(a,b){ return (a.dateISO||'').localeCompare(b.dateISO||''); })
     : null;
-  var matches = schedMatches && schedMatches.length > 0 ? schedMatches : (MATCHES[league]||[]);
+  var matches = schedMatches && schedMatches.length > 0
+    ? schedMatches.filter(function(m){ return !m._deleted; })
+    : (MATCHES[league]||[]);
   var players=Object.keys(sharedData.players||{}).sort();
   var wrap=document.getElementById('ov-grid-wrap');
   if(!wrap)return;
@@ -5517,8 +5595,14 @@ function showAddMatchForm(editId){
     +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Address (optional)</label><input class="form-input" id="am-address" value="'+esc(existing.address||'')+'" placeholder="Full address..." /></div>'
     +'<div class="form-field"><label class="form-label">Season</label><input class="form-input" id="am-season" value="'+esc(existing.season||season)+'" placeholder="e.g. 2026" /></div>'
     +'</div>'
-    +'<div style="display:flex;gap:10px;margin-top:20px">'
+    +(isEdit?'<div style="margin:12px 0;padding:10px 14px;background:rgba(122,26,26,.1);border:1px solid rgba(122,26,26,.25);border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+      +'<div><div style="font-size:12px;font-weight:600;color:var(--no-t)">🔄 Reset Availability</div>'
+      +'<div style="font-size:11px;color:var(--muted)">Clears all responses and notifies players</div></div>'
+      +'<button class="admin-btn admin-btn-red" data-id="'+esc(editId)+'" data-lg="'+esc(league)+'" onclick="resetMatchAvailability(this.dataset.id,this.dataset.lg)" style="padding:5px 14px;font-size:12px;white-space:nowrap">Reset All</button>'
+      +'</div>':'')
+    +'<div style="display:flex;gap:10px;margin-top:14px">'
     +'<button class="btn-save" '+(isEdit?'data-edit="'+esc(editId)+'"':'')+' onclick="saveMatch(this.dataset.edit)" style="flex:1">Save Match</button>'
+    +(isEdit?'<button class="btn-cancel" data-edit="'+esc(editId)+'" data-lg="'+esc(currentMatchLeague||'')+'" onclick="resetMatchAvailability(this.dataset.edit, this.dataset.lg)" style="background:rgba(138,107,26,.15);border-color:var(--maybe);color:var(--maybe-t);flex:1">↺ Reset Availability</button>':'')
     +(isEdit&&(adminUnlocked||((sharedData.permissions||{}).admins||[]).indexOf(currentPlayer)>=0)?'<button class="btn-cancel" data-edit="'+esc(editId)+'" onclick="deleteMatchConfirm(this.dataset.edit)" style="background:rgba(122,26,26,.2);border-color:var(--no);color:var(--no-t);flex:1">Delete Match</button>':'')
     +'<button class="btn-cancel" onclick="document.getElementById(\'add-match-modal\').remove()" style="flex:1">Cancel</button>'
     +'</div></div>';
@@ -5611,23 +5695,81 @@ function saveMatch(editId){
   showToast('Match saved!');
 }
 
+function resetMatchAvailability(matchId, league){
+  if(!confirm('Reset ALL player availability for this match? This cannot be undone — players will need to re-confirm.')) return;
+  var players = Object.keys(sharedData.players||{});
+  var count = 0;
+  players.forEach(function(p){
+    var pd = sharedData.players[p]||{};
+    // Reset schedule-based key (m_timestamp or match_league_idx)
+    if(pd[matchId]){
+      delete sharedData.players[p][matchId];
+      fbWrite('players/'+p+'/'+matchId, null);
+      count++;
+    }
+    // Also reset index-based key if we can find it
+    var season = getActiveSeason();
+    var schedKey = (league||currentMatchLeague)+'_'+season;
+    var schedData = sharedData.schedule&&sharedData.schedule[schedKey]||{};
+    var entry = schedData[matchId];
+    if(entry){
+      // Find corresponding index in MATCHES for this league
+      var baseList = MATCHES[league||currentMatchLeague]||[];
+      baseList.forEach(function(m,i){
+        var hardId = 'match_'+(league||currentMatchLeague)+'_'+i;
+        if(hardId===matchId || (entry.day && m.day===entry.day)){
+          var idxKey = (league||currentMatchLeague)+'_'+i;
+          if(pd[idxKey]){
+            delete sharedData.players[p][idxKey];
+            fbWrite('players/'+p+'/'+idxKey, null);
+            count++;
+          }
+        }
+      });
+    }
+  });
+  // Store reset notice
+  if(!sharedData.matchResets) sharedData.matchResets={};
+  var entry2 = (sharedData.schedule&&sharedData.schedule[(league||currentMatchLeague)+'_'+getActiveSeason()]&&sharedData.schedule[(league||currentMatchLeague)+'_'+getActiveSeason()][matchId])||{};
+  sharedData.matchResets[matchId] = {
+    matchId: matchId, league: league||currentMatchLeague,
+    notice: '⚠️ Availability was reset for '+esc(entry2.date||matchId)+' — please re-confirm your availability.',
+    resetAt: new Date().toISOString(), resetBy: currentPlayer
+  };
+  fbWrite('matchResets/'+matchId, sharedData.matchResets[matchId]);
+  saveData();
+  renderMatches(league||currentMatchLeague);
+  showToast('Availability reset for '+count+' players ✅');
+}
+
 function deleteMatchConfirm(matchId){
   if(!confirm('Delete this match? It will be moved to the archive — restore anytime from Admin → Archive.')) return;
   var season = getActiveSeason();
   var key = currentMatchLeague+'_'+season;
-  // Archive before deleting
+  if(!sharedData.schedule) sharedData.schedule={};
+  if(!sharedData.schedule[key]) sharedData.schedule[key]={};
+  var matchData = sharedData.schedule[key][matchId] || {};
+  // For hardcoded matches, matchId may be an idx — find it
+  if(!matchData.id){
+    // Try to find by searching MATCHES
+    var baseList = MATCHES[currentMatchLeague]||[];
+    var parsedIdx = parseInt(matchId);
+    if(!isNaN(parsedIdx) && baseList[parsedIdx]){
+      matchData = Object.assign({}, baseList[parsedIdx], {id: matchId, league: currentMatchLeague});
+    }
+  }
   if(!sharedData.archive) sharedData.archive={};
   if(!sharedData.archive.matches) sharedData.archive.matches={};
-  var matchData = (sharedData.schedule&&sharedData.schedule[key]&&sharedData.schedule[key][matchId])||{};
-  var entry = {data:matchData, league:currentMatchLeague, scheduleKey:key,
-    deletedAt:new Date().toISOString(), deletedBy:currentPlayer};
-  sharedData.archive.matches[matchId] = entry;
-  // Write archive FIRST, then delete on success
-  var archRef = window.__fbRef(window.__db, 'ss2026/archive/matches/'+matchId);
+  var archiveId = matchId+'_'+Date.now();
+  var entry = {data: matchData, league: currentMatchLeague, scheduleKey: key,
+    matchId: matchId, deletedAt: new Date().toISOString(), deletedBy: currentPlayer};
+  var archRef = window.__fbRef(window.__db, 'ss2026/archive/matches/'+archiveId);
   window.__fbSet(archRef, entry).then(function(){
     console.log('Match archive written ✅');
-    if(sharedData.schedule&&sharedData.schedule[key]) delete sharedData.schedule[key][matchId];
-    fbWrite('schedule/'+key+'/'+matchId, null);
+    sharedData.archive.matches[archiveId] = entry;
+    // Mark as deleted in schedule (so hardcoded matches disappear too)
+    sharedData.schedule[key][matchId] = {id: matchId, _deleted: true};
+    fbWrite('schedule/'+key+'/'+matchId, {id: matchId, _deleted: true});
     saveData();
     document.getElementById('add-match-modal').remove();
     renderMatchesTab();
@@ -6082,7 +6224,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.1.4';
+var APP_VERSION = 'v2.1.5';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
