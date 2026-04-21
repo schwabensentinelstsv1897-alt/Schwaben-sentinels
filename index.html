@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.2</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.3</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.2</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.3</span></div>
   </div>
 </div>
 
@@ -1827,10 +1827,29 @@ function resetMatchAvailability(matchId, league, silent){
   var matchData = (sharedData.schedule&&sharedData.schedule[schedKey]&&sharedData.schedule[schedKey][matchId])||{};
   var players = Object.keys(sharedData.players||{});
 
-  // Extract the integer index from matchId (e.g. 'match_50overs_3' → 3)
-  // Player availability is keyed as league+'_'+idx (e.g. '50overs_3')
+  // Extract the integer index from matchId
+  // 'match_50overs_3' → idx=3, availKey='50overs_3'
+  // 'm_1234567890' → find idx by matching in renderMatches matchList
   var parts = (matchId||'').split('_');
-  var parsedIdx = (matchId||'').startsWith('match_') ? parseInt(parts[parts.length-1]) : NaN;
+  var parsedIdx = NaN;
+  if((matchId||'').startsWith('match_')){
+    parsedIdx = parseInt(parts[parts.length-1]);
+  } else if((matchId||'').startsWith('m_')){
+    // Find position of this match in the merged matchList
+    var season2 = getActiveSeason();
+    var schedKey2 = league+'_'+season2;
+    var schedData2 = (sharedData.schedule&&sharedData.schedule[schedKey2])||{};
+    var baseList2 = MATCHES[league]||[];
+    // Count hardcoded matches to get offset
+    parsedIdx = baseList2.length; // start after hardcoded
+    var schedOnlyIds = Object.values(schedData2)
+      .filter(function(s){ return s.id && s.id.startsWith('m_') && !s._deleted; })
+      .sort(function(a,b){ return new Date(a.dateISO||'9999')-new Date(b.dateISO||'9999'); })
+      .map(function(s){ return s.id; });
+    var mIdx = schedOnlyIds.indexOf(matchId);
+    if(mIdx >= 0) parsedIdx = baseList2.length + mIdx;
+    else parsedIdx = NaN;
+  }
   var availKey = !isNaN(parsedIdx) ? (league+'_'+parsedIdx) : matchId;
   console.log('resetMatchAvailability: matchId='+matchId+' parsedIdx='+parsedIdx+' availKey='+availKey);
 
@@ -2036,6 +2055,19 @@ async function loadData(){
         if(!fbData.pins) fbData.pins={};
         // Always accept Firebase data — this handles real-time updates from other devices
         sharedData=fbData;
+        // One-time cleanup: remove test/dummy players
+        var dummyPlayers = ['Test play', 'prade'];
+        var cleanupNeeded = false;
+        dummyPlayers.forEach(function(d){
+          if(sharedData.players && sharedData.players[d]){
+            delete sharedData.players[d];
+            if(sharedData.pins) delete sharedData.pins[d];
+            fbWrite('players/'+d, null);
+            fbWrite('pins/'+d, null);
+            cleanupNeeded = true;
+            console.log('Cleaned up dummy player:', d);
+          }
+        });
         // Sync to localStorage
         try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData)); }catch(e){}
         console.log('Firebase onValue fired, players:', Object.keys(sharedData.players||{}).length);
@@ -6264,7 +6296,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.2';
+var APP_VERSION = 'v2.2.3';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
