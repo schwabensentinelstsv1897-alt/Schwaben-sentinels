@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.6</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.7</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1529,6 +1529,16 @@ textarea.form-input{resize:vertical;min-height:80px}
             <div id="archive-content"><div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No archived items yet.</div></div>
           </div>
 
+          <!-- Auto-Backup Section -->
+          <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:600;color:var(--gold);letter-spacing:1px;text-transform:uppercase">💾 Auto-Backups</div>
+              <button class="admin-btn admin-btn-gray" onclick="renderAutoBackups()" style="padding:5px 12px;font-size:12px">↻ Refresh</button>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Last 5 automatic local backups — use to restore accidental deletions on this device.</div>
+            <div id="auto-backup-list"><div style="font-size:12px;color:var(--muted)">No auto-backups yet.</div></div>
+          </div>
+
           <!-- Players Table -->
           <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;overflow:hidden">
             <div style="background:var(--deep);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -1564,7 +1574,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.6</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.7</span></div>
   </div>
 </div>
 
@@ -2637,16 +2647,20 @@ function getMergedMatchList(league, season){
     }
     var base = Object.assign({}, m, {id: schedId, _schedIdx: i});
     if(se && !se._deleted){
+      var mergedHome = se.home || m.home;
+      var mergedAway = se.away || m.away;
+      var ourT = getOurTeamName();
+      var calcLoc = (mergedHome===ourT || mergedHome.toLowerCase().indexOf('großdeinbach')>=0 || mergedHome.toLowerCase().indexOf('grossdeinbach')>=0) ? 'Home' : 'Away';
       base = Object.assign(base, {
         date: se.date || m.date,
         dateISO: se.dateISO || m.dateISO,
         time: se.time || m.time,
-        home: se.home || m.home,
-        away: se.away || m.away,
+        home: mergedHome,
+        away: mergedAway,
         venue: se.venue || m.venue,
         address: se.address || m.address || '',
         mapLink: se.mapLink || m.mapLink || '',
-        location: se.location || m.location
+        location: calcLoc
       });
     }
     return base;
@@ -5718,7 +5732,7 @@ function saveMatch(editId){
   var season = document.getElementById('am-season').value.trim()||getActiveSeason();
   if(!dateISO||!home||!away){showToast('Please fill in date, home and away teams.');return;}
   var ourTeam = getOurTeamName();
-  var location = home===ourTeam?'Home':'Away';
+  var location = (home===ourTeam || home.toLowerCase().indexOf('großdeinbach')>=0 || home.toLowerCase().indexOf('grossdeinbach')>=0) ? 'Home' : 'Away';
   if(!sharedData.schedule) sharedData.schedule={};
   var key = league+'_'+season;
   if(!sharedData.schedule[key]) sharedData.schedule[key]={};
@@ -6339,7 +6353,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.6';
+var APP_VERSION = 'v2.2.7';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -7755,6 +7769,64 @@ function selectEmoji(em){
     var p=document.getElementById(_epid+'-preview');if(p)p.textContent=em;
   }
   var m=document.getElementById('epicker');if(m)m.remove();
+}
+
+// ─── AUTO-BACKUP SYSTEM ──────────────────────────────────────────────────────
+var _lastAutoBackup = 0;
+function triggerAutoBackup(){
+  var now = Date.now();
+  if(now - _lastAutoBackup < 60000) return; // Max once per minute
+  _lastAutoBackup = now;
+  try{
+    var backups = JSON.parse(localStorage.getItem('ss2026-autobackups')||'[]');
+    var entry = {
+      timestamp: new Date().toISOString(),
+      label: new Date().toLocaleString(),
+      data: JSON.stringify(sharedData)
+    };
+    backups.unshift(entry);
+    if(backups.length > 5) backups = backups.slice(0,5); // Keep last 5
+    localStorage.setItem('ss2026-autobackups', JSON.stringify(backups));
+    console.log('Auto-backup saved:', entry.label);
+  }catch(e){ console.warn('Auto-backup failed:', e.message); }
+}
+
+function getAutoBackups(){
+  try{ return JSON.parse(localStorage.getItem('ss2026-autobackups')||'[]'); }
+  catch(e){ return []; }
+}
+
+function restoreAutoBackup(idx){
+  var backups = getAutoBackups();
+  if(!backups[idx]){ showToast('Backup not found.'); return; }
+  if(!confirm('Restore backup from '+backups[idx].label+'? This will overwrite current data.')) return;
+  try{
+    sharedData = JSON.parse(backups[idx].data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData));
+    // Write to Firebase
+    var ref = window.__fbRef(window.__db, 'ss2026');
+    window.__fbSet(ref, sharedData).then(function(){
+      showToast('Backup restored ✅ — refreshing...');
+      setTimeout(function(){ location.reload(); }, 1500);
+    }).catch(function(){ showToast('Restored locally — Firebase sync failed.'); });
+  }catch(e){ showToast('Restore failed: '+e.message); }
+}
+
+function renderAutoBackups(){
+  var container = document.getElementById('auto-backup-list');
+  if(!container) return;
+  var backups = getAutoBackups();
+  if(backups.length===0){
+    container.innerHTML = '<div style="font-size:12px;color:var(--muted)">No auto-backups yet.</div>';
+    return;
+  }
+  container.innerHTML = backups.map(function(b, i){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:10px">'
+      +'<div><div style="font-size:13px;color:var(--text)">'+esc(b.label)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+Math.round(b.data.length/1024)+' KB</div></div>'
+      +'<button class="admin-btn admin-btn-green" data-idx="'+i+'" onclick="restoreAutoBackup(parseInt(this.dataset.idx))" style="padding:4px 12px;font-size:11px">↩ Restore</button>'
+      +'</div>';
+  }).join('');
 }
 
 // ─── ARCHIVE SYSTEM ──────────────────────────────────────────────────────────
