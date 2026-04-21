@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.9</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.3.0</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1574,7 +1574,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.9</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.3.0</span></div>
   </div>
 </div>
 
@@ -2766,7 +2766,16 @@ function buildCard(league,idx,match,matchId){
 
   var availHtml;
   if(locked){
-    availHtml='<div class="locked-msg">Locked - within 16 days of match. Contact admin to unlock.</div>'
+    var isAdminViewLock = adminUnlocked || ((sharedData.permissions||{}).admins||[]).indexOf(currentPlayer)>=0;
+    availHtml='<div class="locked-msg" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+      +'<span>🔒 Locked — within 16 days of match.</span>'
+      +(isAdminViewLock
+        ?'<div style="display:flex;gap:6px">'
+          +'<button class="admin-btn admin-btn-gold" data-l="'+league+'" data-i="'+idx+'" onclick="unlockMatchForAll(this.dataset.l, parseInt(this.dataset.i))" style="padding:4px 12px;font-size:11px">🔓 Unlock All</button>'
+          +'<button class="admin-btn admin-btn-gray" data-l="'+league+'" data-i="'+idx+'" data-p="'+esc(currentPlayer)+'" onclick="adminUnlockMatch(this.dataset.l, parseInt(this.dataset.i), this.dataset.p)" style="padding:4px 12px;font-size:11px">🔓 Unlock Me</button>'
+          +'</div>'
+        :'<span style="font-size:11px;color:var(--muted)">Contact admin</span>')
+      +'</div>'
       +'<div class="avail-btns" style="opacity:.4;pointer-events:none">'
       +'<button class="abtn abtn-yes '+(my.status==='yes'?'active':'')+'">Available</button>'
       +'<button class="abtn abtn-maybe '+(my.status==='maybe'?'active':'')+'">Maybe</button>'
@@ -5658,6 +5667,30 @@ function findMatchIndex(match){
 }
 
 // ─── ADD/EDIT MATCH FORM ──────────────────────────────────────────────────────
+function unlockMatchForAll(league, idx){
+  if(!confirm('Unlock this match for ALL players? Everyone can re-vote.')) return;
+  var players = Object.keys(sharedData.players||{});
+  if(!sharedData.adminUnlocks) sharedData.adminUnlocks={};
+  players.forEach(function(p){
+    var key = league+'_'+idx+'_'+p;
+    sharedData.adminUnlocks[key] = true;
+    fbWrite('adminUnlocks/'+key, true);
+  });
+  saveData();
+  renderMatches(league);
+  showToast('Match unlocked for all players ✅');
+}
+
+function adminUnlockMatch(league, idx, player){
+  if(!sharedData.adminUnlocks) sharedData.adminUnlocks={};
+  var key = league+'_'+idx+'_'+player;
+  sharedData.adminUnlocks[key] = true;
+  fbWrite('adminUnlocks/'+key, true);
+  saveData();
+  renderMatches(league);
+  showToast('Unlocked for '+player+' ✅');
+}
+
 function applyGroundToMatch(val){
   var venueInput = document.getElementById('am-venue');
   var addrInput = document.getElementById('am-address');
@@ -6338,7 +6371,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.9';
+var APP_VERSION = 'v2.3.0';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
