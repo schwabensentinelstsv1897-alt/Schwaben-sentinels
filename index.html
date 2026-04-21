@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.7</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.8</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.7</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.8</span></div>
   </div>
 </div>
 
@@ -2567,8 +2567,9 @@ function renderMatches(league){
     var schedId = 'match_'+league+'_'+i;
     var schedEntry = schedData[schedId] || null;
     if(!schedEntry){
+      // Only use day-match as fallback if it's a manually added (m_) entry
       Object.values(schedData).forEach(function(s){
-        if(s.day && m.day && s.day === m.day) schedEntry = s;
+        if(s.id && s.id.startsWith('m_') && s.day && m.day && s.day === m.day) schedEntry = s;
       });
     }
     // Always inject schedId as the canonical id so Edit/Delete work
@@ -5582,6 +5583,9 @@ function showAddMatchForm(editId, editLeague){
     }
   }
   var ourTeam = getOurTeamName();
+  // Remove existing modal if any
+  var existingModal = document.getElementById('add-match-modal');
+  if(existingModal) existingModal.remove();
   var modal = document.createElement('div');
   modal.id = 'add-match-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;overflow-y:auto;padding:20px';
@@ -6238,7 +6242,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.1.7';
+var APP_VERSION = 'v2.1.8';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
