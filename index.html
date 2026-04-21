@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.5</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.7</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.5</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.7</span></div>
   </div>
 </div>
 
@@ -2564,18 +2564,17 @@ function renderMatches(league){
   // Build merged list: start from hardcoded MATCHES, overlay schedule edits by day
   var baseList = MATCHES[league]||[];
   var matchList = baseList.map(function(m, i){
-    // Find schedule entry that matches this hardcoded match by day label or index
     var schedId = 'match_'+league+'_'+i;
     var schedEntry = schedData[schedId] || null;
-    // Also check any schedule entry with same day
     if(!schedEntry){
       Object.values(schedData).forEach(function(s){
         if(s.day && m.day && s.day === m.day) schedEntry = s;
       });
     }
+    // Always inject schedId as the canonical id so Edit/Delete work
+    var base = Object.assign({}, m, {id: schedId, _schedIdx: i});
     if(schedEntry){
-      // Override hardcoded data with schedule edits
-      return Object.assign({}, m, {
+      base = Object.assign(base, {
         date: schedEntry.date || m.date,
         dateISO: schedEntry.dateISO || m.dateISO,
         time: schedEntry.time || m.time,
@@ -2583,10 +2582,11 @@ function renderMatches(league){
         away: schedEntry.away || m.away,
         venue: schedEntry.venue || m.venue,
         address: schedEntry.address || m.address,
-        location: schedEntry.location || m.location
+        location: schedEntry.location || m.location,
+        _deleted: schedEntry._deleted || false
       });
     }
-    return m;
+    return base;
   });
 
   // Also add any schedule-only matches (added via + Add Match), skip deleted
@@ -5562,13 +5562,24 @@ function findMatchIndex(match){
 }
 
 // ─── ADD/EDIT MATCH FORM ──────────────────────────────────────────────────────
-function showAddMatchForm(editId){
+function showAddMatchForm(editId, editLeague){
   var isEdit = !!editId;
+  if(editLeague) currentMatchLeague = editLeague;
   var season = getActiveSeason();
   var existing = {};
   if(isEdit && currentMatchLeague!=='friendly'){
     var key = currentMatchLeague+'_'+season;
+    // editId is now always 'match_league_idx' format from buildCard
     existing = (sharedData.schedule&&sharedData.schedule[key]&&sharedData.schedule[key][editId]) || {};
+    // Fall back to hardcoded MATCHES using the index from the id
+    if(!existing.date){
+      var parts = editId ? editId.split('_') : [];
+      var parsedIdx = parts.length > 0 ? parseInt(parts[parts.length-1]) : NaN;
+      if(!isNaN(parsedIdx)){
+        var baseMatch = (MATCHES[currentMatchLeague]||[])[parsedIdx];
+        if(baseMatch) existing = Object.assign({id: editId}, baseMatch, existing);
+      }
+    }
   }
   var ourTeam = getOurTeamName();
   var modal = document.createElement('div');
@@ -5610,7 +5621,8 @@ function showAddMatchForm(editId){
 }
 
 function showEditMatchForm(matchId, league){
-  showAddMatchForm(matchId);
+  if(league) currentMatchLeague = league;
+  showAddMatchForm(matchId, league);
 }
 
 function saveMatch(editId){
@@ -5628,6 +5640,8 @@ function saveMatch(editId){
   if(!sharedData.schedule) sharedData.schedule={};
   var key = league+'_'+season;
   if(!sharedData.schedule[key]) sharedData.schedule[key]={};
+  // For hardcoded matches, use standard schedule id format
+  // editId is always 'match_league_idx' for hardcoded matches, or 'm_timestamp' for added ones
   var id = editId||('m_'+Date.now());
   var dateFormatted = new Date(dateISO).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('.');
   var address = document.getElementById('am-address')?document.getElementById('am-address').value.trim():'';
@@ -6224,7 +6238,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.1.5';
+var APP_VERSION = 'v2.1.7';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
