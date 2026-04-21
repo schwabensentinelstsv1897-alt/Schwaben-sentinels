@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.4</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.6</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.4</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.6</span></div>
   </div>
 </div>
 
@@ -2070,19 +2070,20 @@ async function loadData(){
         if(!fbData.pins) fbData.pins={};
         // Always accept Firebase data — this handles real-time updates from other devices
         sharedData=fbData;
-        // One-time cleanup: remove test/dummy players
-        var dummyPlayers = ['Test play', 'prade'];
-        var cleanupNeeded = false;
-        dummyPlayers.forEach(function(d){
-          if(sharedData.players && sharedData.players[d]){
-            delete sharedData.players[d];
-            if(sharedData.pins) delete sharedData.pins[d];
-            fbWrite('players/'+d, null);
-            fbWrite('pins/'+d, null);
-            cleanupNeeded = true;
-            console.log('Cleaned up dummy player:', d);
-          }
-        });
+        // One-time cleanup: remove test/dummy players (only runs once per session)
+        if(!window._cleanupDone){
+          window._cleanupDone = true;
+          var dummyPlayers = ['Test play', 'prade'];
+          dummyPlayers.forEach(function(d){
+            if(sharedData.players && sharedData.players[d]){
+              delete sharedData.players[d];
+              if(sharedData.pins) delete sharedData.pins[d];
+              fbWrite('players/'+d, null);
+              fbWrite('pins/'+d, null);
+              console.log('Cleaned up dummy player:', d);
+            }
+          });
+        }
         // Sync to localStorage
         try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData)); }catch(e){}
         console.log('Firebase onValue fired, players:', Object.keys(sharedData.players||{}).length);
@@ -2619,54 +2620,63 @@ function checkWarnThreshold(player){
   if(c>=t)showToast('Warning: '+player+' has '+c+' late changes!');
 }
 
+function getMergedMatchList(league, season){
+  season = season || getActiveSeason();
+  var schedKey = league+'_'+season;
+  var schedData = sharedData.schedule && sharedData.schedule[schedKey] ? sharedData.schedule[schedKey] : {};
+  var baseList = MATCHES[league]||[];
+
+  var baseMatches = baseList.map(function(m, i){
+    var schedId = 'match_'+league+'_'+i;
+    var se = schedData[schedId] || null;
+    // Only use day-match as fallback for manually added (m_) entries
+    if(!se){
+      Object.values(schedData).forEach(function(s){
+        if(s.id && s.id.startsWith('m_') && s.day && m.day && s.day === m.day) se = s;
+      });
+    }
+    var base = Object.assign({}, m, {id: schedId, _schedIdx: i});
+    if(se && !se._deleted){
+      base = Object.assign(base, {
+        date: se.date || m.date,
+        dateISO: se.dateISO || m.dateISO,
+        time: se.time || m.time,
+        home: se.home || m.home,
+        away: se.away || m.away,
+        venue: se.venue || m.venue,
+        address: se.address || m.address || '',
+        mapLink: se.mapLink || m.mapLink || '',
+        location: se.location || m.location
+      });
+    }
+    return base;
+  });
+
+  // Add m_ only matches (not in hardcoded list), skip deleted
+  Object.values(schedData).forEach(function(s){
+    if(s.id && s.id.startsWith('m_') && !s._deleted){
+      baseMatches.push(s);
+    }
+  });
+
+  // Sort all by date
+  baseMatches.sort(function(a,b){
+    return new Date(a.dateISO||'9999') - new Date(b.dateISO||'9999');
+  });
+
+  // Filter deleted
+  return baseMatches.filter(function(m){ return !m._deleted; });
+}
+
 function renderMatches(league){
   var container=document.getElementById('matches-'+league);
   if(!container)return;
   var countEl=document.getElementById('count-'+league);
   container.innerHTML='';
 
-  // Merge hardcoded MATCHES with any schedule edits
+  // Use shared helper for consistent match list
   var season = getActiveSeason();
-  var schedKey = league+'_'+season;
-  var schedData = sharedData.schedule && sharedData.schedule[schedKey] ? sharedData.schedule[schedKey] : {};
-
-  // Build merged list: start from hardcoded MATCHES, overlay schedule edits by day
-  var baseList = MATCHES[league]||[];
-  var matchList = baseList.map(function(m, i){
-    var schedId = 'match_'+league+'_'+i;
-    var schedEntry = schedData[schedId] || null;
-    if(!schedEntry){
-      // Only use day-match as fallback if it's a manually added (m_) entry
-      Object.values(schedData).forEach(function(s){
-        if(s.id && s.id.startsWith('m_') && s.day && m.day && s.day === m.day) schedEntry = s;
-      });
-    }
-    // Always inject schedId as the canonical id so Edit/Delete work
-    var base = Object.assign({}, m, {id: schedId, _schedIdx: i});
-    if(schedEntry && !schedEntry._deleted){
-      base = Object.assign(base, {
-        date: schedEntry.date || m.date,
-        dateISO: schedEntry.dateISO || m.dateISO,
-        time: schedEntry.time || m.time,
-        home: schedEntry.home || m.home,
-        away: schedEntry.away || m.away,
-        venue: schedEntry.venue || m.venue,
-        address: schedEntry.address || m.address || '',
-        mapLink: schedEntry.mapLink || m.mapLink || '',
-        location: schedEntry.location || m.location
-      });
-    }
-    return base;
-  });
-
-  // Also add any schedule-only matches (added via + Add Match), skip deleted
-  Object.values(schedData).forEach(function(s){
-    if(s.id && s.id.startsWith('m_') && !s._deleted){
-      matchList.push(s);
-    }
-  });
-  // Note: _deleted is only applied for manually-added (m_prefix) matches
-  // Hardcoded matches are never deleted - their schedule entry is just cleared
+  var matchList = getMergedMatchList(league, season);
 
   if(matchList.length===0){
     container.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-size:14px">No matches found.</div>';
@@ -2884,24 +2894,8 @@ function renderOverview(){
   var schedMatches = sharedData.schedule && sharedData.schedule[schedKey]
     ? Object.values(sharedData.schedule[schedKey]).sort(function(a,b){ return (a.dateISO||'').localeCompare(b.dateISO||''); })
     : null;
-  // Build merged match list same as renderMatches
-  var schedData2 = sharedData.schedule && sharedData.schedule[schedKey] ? sharedData.schedule[schedKey] : {};
-  var baseMatches = (MATCHES[league]||[]).map(function(m, i){
-    var sid = 'match_'+league+'_'+i;
-    var se = schedData2[sid];
-    var base = Object.assign({}, m, {id: sid, _schedIdx: i});
-    if(se && !se._deleted) base = Object.assign(base, {
-      date: se.date||m.date, dateISO: se.dateISO||m.dateISO,
-      home: se.home||m.home, away: se.away||m.away,
-      venue: se.venue||m.venue, location: se.location||m.location
-    });
-    if(se && se._deleted && !se.date) base._deleted = true;
-    return base;
-  });
-  var mOnlyMatches = Object.values(schedData2)
-    .filter(function(s){ return s.id && s.id.startsWith('m_') && !s._deleted; })
-    .sort(function(a,b){ return new Date(a.dateISO||'9999')-new Date(b.dateISO||'9999'); });
-  var matches = baseMatches.filter(function(m){ return !m._deleted; }).concat(mOnlyMatches);
+  // Use same merge helper as renderMatches for consistency
+  var matches = getMergedMatchList(league, season);
   var players=Object.keys(sharedData.players||{}).sort();
   var wrap=document.getElementById('ov-grid-wrap');
   if(!wrap)return;
@@ -2936,7 +2930,9 @@ function renderOverview(){
     // Compute squad positions for all matches for this player row header
     tbody+='<tr><td class="player-name-cell">'+esc(player)+(player===currentPlayer?' (you)':'')+' </td>';
     matches.forEach(function(m,idx){
-      var d=(sharedData.players[player]&&sharedData.players[player][league+'_'+idx])||{};
+      // Use _schedIdx for hardcoded matches, position for m_ matches
+      var availIdx = m._schedIdx !== undefined ? m._schedIdx : idx;
+      var d=(sharedData.players[player]&&sharedData.players[player][league+'_'+availIdx])||{};
       var s=d.status||'pending';
       var title=d.reason?'title="'+esc(d.reason)+'"':'';
       // Get squad position for this match
@@ -2980,7 +2976,9 @@ function exportExcel(){
     players.forEach(function(player){
       var yC=0,mC=0,nC=0,pC=0;
       var row=[player].concat(matches.map(function(m,idx){
-        var d=(sharedData.players[player]&&sharedData.players[player][league+'_'+idx])||{};
+        // Use _schedIdx for hardcoded matches, position for m_ matches
+      var availIdx = m._schedIdx !== undefined ? m._schedIdx : idx;
+      var d=(sharedData.players[player]&&sharedData.players[player][league+'_'+availIdx])||{};
         var s=d.status;
         if(s==='yes')yC++;else if(s==='maybe')mC++;else if(s==='no')nC++;else pC++;
         return(s==='yes'?'Available':s==='maybe'?'Maybe':s==='no'?'Unavailable':'--')+(d.reason?' ('+d.reason+')':'');
@@ -6341,7 +6339,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.4';
+var APP_VERSION = 'v2.2.6';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
