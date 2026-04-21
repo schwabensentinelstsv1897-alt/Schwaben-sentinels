@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.3</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.4</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.3</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.4</span></div>
   </div>
 </div>
 
@@ -1818,6 +1818,21 @@ function goToMatch(el){
   var tabEl=document.getElementById("tab-"+lg);
   switchTab(lg,tabEl);
   setTimeout(function(){scrollToCard(lg,idx);},300);
+}
+
+function clearSlotVotes(league, slotIdx){
+  var key = league+'_'+slotIdx;
+  if(!confirm('Clear all votes for slot '+key+'? This removes orphaned availability data.')) return;
+  var players = Object.keys(sharedData.players||{});
+  players.forEach(function(p){
+    if(sharedData.players[p] && sharedData.players[p][key]){
+      delete sharedData.players[p][key];
+      fbWrite('players/'+p+'/'+key, null);
+    }
+  });
+  saveData();
+  showToast('Cleared votes for slot: '+key);
+  renderOverview();
 }
 
 function resetMatchAvailability(matchId, league, silent){
@@ -2869,9 +2884,24 @@ function renderOverview(){
   var schedMatches = sharedData.schedule && sharedData.schedule[schedKey]
     ? Object.values(sharedData.schedule[schedKey]).sort(function(a,b){ return (a.dateISO||'').localeCompare(b.dateISO||''); })
     : null;
-  var matches = schedMatches && schedMatches.length > 0
-    ? schedMatches.filter(function(m){ return !m._deleted; })
-    : (MATCHES[league]||[]);
+  // Build merged match list same as renderMatches
+  var schedData2 = sharedData.schedule && sharedData.schedule[schedKey] ? sharedData.schedule[schedKey] : {};
+  var baseMatches = (MATCHES[league]||[]).map(function(m, i){
+    var sid = 'match_'+league+'_'+i;
+    var se = schedData2[sid];
+    var base = Object.assign({}, m, {id: sid, _schedIdx: i});
+    if(se && !se._deleted) base = Object.assign(base, {
+      date: se.date||m.date, dateISO: se.dateISO||m.dateISO,
+      home: se.home||m.home, away: se.away||m.away,
+      venue: se.venue||m.venue, location: se.location||m.location
+    });
+    if(se && se._deleted && !se.date) base._deleted = true;
+    return base;
+  });
+  var mOnlyMatches = Object.values(schedData2)
+    .filter(function(s){ return s.id && s.id.startsWith('m_') && !s._deleted; })
+    .sort(function(a,b){ return new Date(a.dateISO||'9999')-new Date(b.dateISO||'9999'); });
+  var matches = baseMatches.filter(function(m){ return !m._deleted; }).concat(mOnlyMatches);
   var players=Object.keys(sharedData.players||{}).sort();
   var wrap=document.getElementById('ov-grid-wrap');
   if(!wrap)return;
@@ -5767,6 +5797,21 @@ function saveMatch(editId){
   showToast('Match saved!');
 }
 
+function clearSlotVotes(league, slotIdx){
+  var key = league+'_'+slotIdx;
+  if(!confirm('Clear all votes for slot '+key+'? This removes orphaned availability data.')) return;
+  var players = Object.keys(sharedData.players||{});
+  players.forEach(function(p){
+    if(sharedData.players[p] && sharedData.players[p][key]){
+      delete sharedData.players[p][key];
+      fbWrite('players/'+p+'/'+key, null);
+    }
+  });
+  saveData();
+  showToast('Cleared votes for slot: '+key);
+  renderOverview();
+}
+
 function resetMatchAvailability(matchId, league){
   if(!confirm('Reset ALL player availability for this match? This cannot be undone — players will need to re-confirm.')) return;
   var players = Object.keys(sharedData.players||{});
@@ -6296,7 +6341,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.3';
+var APP_VERSION = 'v2.2.4';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
