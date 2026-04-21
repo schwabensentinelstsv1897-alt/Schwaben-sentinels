@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.1.9</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.0</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.1.9</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.0</span></div>
   </div>
 </div>
 
@@ -1823,33 +1823,46 @@ function goToMatch(el){
 function resetMatchAvailability(matchId, league, silent){
   if(!silent && !confirm('Reset all player availability for this match? All responses will be cleared and players will be notified.')) return;
   var season = getActiveSeason();
-  var key = league+'_'+season;
-  var matchData = (sharedData.schedule&&sharedData.schedule[key]&&sharedData.schedule[key][matchId])||{};
+  var schedKey = league+'_'+season;
+  var matchData = (sharedData.schedule&&sharedData.schedule[schedKey]&&sharedData.schedule[schedKey][matchId])||{};
   var players = Object.keys(sharedData.players||{});
 
-  // Clear availability for this match
+  // Extract the integer index from matchId (e.g. 'match_50overs_3' → 3)
+  // Player availability is keyed as league+'_'+idx (e.g. '50overs_3')
+  var parts = (matchId||'').split('_');
+  var parsedIdx = parseInt(parts[parts.length-1]);
+  var availKey = !isNaN(parsedIdx) ? (league+'_'+parsedIdx) : matchId;
+
+  console.log('Resetting availability key:', availKey, 'for matchId:', matchId);
+
+  // Clear availability for this match using ALL possible key formats
   players.forEach(function(p){
     var pd = sharedData.players[p]||{};
-    // Check both schedule id and legacy idx-based keys
+    var keysToDelete = [];
     Object.keys(pd).forEach(function(k){
-      if(k === matchId || k === league+'_availability_'+matchId){
-        delete sharedData.players[p][k];
-        fbWrite('players/'+p+'/'+k, null);
+      if(k === availKey || k === matchId || k === String(parsedIdx)){
+        keysToDelete.push(k);
       }
+    });
+    keysToDelete.forEach(function(k){
+      delete sharedData.players[p][k];
+      fbWrite('players/'+p+'/'+k, null);
     });
   });
 
   // Store reset notice
   if(!sharedData.matchResets) sharedData.matchResets={};
-  var notice = '⚠️ '+esc(matchData.date||matchId)+' vs '+(matchData.home&&matchData.away?esc(matchData.away||matchData.home):matchId)+' — availability has been reset. Please re-confirm.';
+  var opp = matchData.location==='Home' ? matchData.away : matchData.home;
+  var notice = '⚠️ '+(matchData.date||'')+' vs '+(opp||'match')+' — availability has been reset. Please re-confirm.';
   sharedData.matchResets[matchId] = {
-    matchId: matchId, league: league, key: key,
+    matchId: matchId, availKey: availKey, league: league,
     notice: notice, resetAt: new Date().toISOString(), resetBy: currentPlayer
   };
   fbWrite('matchResets/'+matchId, sharedData.matchResets[matchId]);
   saveData();
-  if(!silent) showToast('Availability reset — players will be notified.');
   renderMatches(league);
+  renderOverview && renderOverview();
+  if(!silent) showToast('Availability reset ✅ — players will be notified on next login.');
 }
 
 function ackResetNotices(){
@@ -2582,7 +2595,8 @@ function renderMatches(league){
         home: schedEntry.home || m.home,
         away: schedEntry.away || m.away,
         venue: schedEntry.venue || m.venue,
-        address: schedEntry.address || m.address,
+        address: schedEntry.address || m.address || '',
+        mapLink: schedEntry.mapLink || m.mapLink || '',
         location: schedEntry.location || m.location,
         _deleted: schedEntry._deleted || false
       });
@@ -2596,11 +2610,13 @@ function renderMatches(league){
       matchList.push(s);
     }
   });
-  // Apply _deleted flag from schedule to hardcoded matches
+  // Apply _deleted flag - but ONLY for manually added matches (m_ prefix)
+  // Hardcoded matches use _deleted on their own id (match_league_idx) but
+  // we need to check if it was intentionally deleted vs just the init entry
   matchList = matchList.map(function(m, i){
-    var schedId = 'match_'+league+'_'+i;
-    var sd = schedData[schedId] || schedData[m.id] || null;
-    if(sd && sd._deleted) return Object.assign({}, m, {_deleted: true});
+    // Only apply _deleted if the schedule entry explicitly marks it AND it has no real data
+    var sd = schedData[m.id] || null;
+    if(sd && sd._deleted && !sd.date) return Object.assign({}, m, {_deleted: true});
     return m;
   });
 
@@ -5690,15 +5706,19 @@ function saveMatch(editId){
     };
     fbWrite('matchResets/'+id, sharedData.matchResets[id]);
 
-    // Reset all player availability for this match in schedule
-    var players = Object.keys(sharedData.players||{});
-    players.forEach(function(p){
+    // Reset all player availability for this match
+    var resetParts = (id||'').split('_');
+    var resetIdx = parseInt(resetParts[resetParts.length-1]);
+    var resetAvailKey = !isNaN(resetIdx) ? (league+'_'+resetIdx) : id;
+    var resetPlayers = Object.keys(sharedData.players||{});
+    resetPlayers.forEach(function(p){
       var pd = sharedData.players[p]||{};
-      // For schedule-based matches, key is the match id
-      if(pd[id]){
-        delete sharedData.players[p][id];
-        fbWrite('players/'+p+'/'+id, null);
-      }
+      [resetAvailKey, id].forEach(function(k){
+        if(pd[k]){
+          delete sharedData.players[p][k];
+          fbWrite('players/'+p+'/'+k, null);
+        }
+      });
     });
     showToast('Match updated — player availability reset due to '+changeReason.join(' & '));
   }
@@ -6243,7 +6263,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.1.9';
+var APP_VERSION = 'v2.2.0';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
