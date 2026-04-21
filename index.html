@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.1</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.2</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.1</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.2</span></div>
   </div>
 </div>
 
@@ -1830,8 +1830,9 @@ function resetMatchAvailability(matchId, league, silent){
   // Extract the integer index from matchId (e.g. 'match_50overs_3' → 3)
   // Player availability is keyed as league+'_'+idx (e.g. '50overs_3')
   var parts = (matchId||'').split('_');
-  var parsedIdx = parseInt(parts[parts.length-1]);
+  var parsedIdx = (matchId||'').startsWith('match_') ? parseInt(parts[parts.length-1]) : NaN;
   var availKey = !isNaN(parsedIdx) ? (league+'_'+parsedIdx) : matchId;
+  console.log('resetMatchAvailability: matchId='+matchId+' parsedIdx='+parsedIdx+' availKey='+availKey);
 
   console.log('Resetting availability key:', availKey, 'for matchId:', matchId);
 
@@ -1840,14 +1841,22 @@ function resetMatchAvailability(matchId, league, silent){
     var pd = sharedData.players[p]||{};
     var keysToDelete = [];
     Object.keys(pd).forEach(function(k){
-      if(k === availKey || k === matchId || k === String(parsedIdx)){
+      // Match any key that could represent this match's availability
+      if(k === availKey ||           // '50overs_3'
+         k === matchId ||            // 'match_50overs_3'
+         k === String(parsedIdx) ||  // '3'
+         k === league+'_'+matchId || // '50overs_match_50overs_3' (edge case)
+         (k.startsWith(league+'_') && k.endsWith('_'+parsedIdx))){ // any variant
         keysToDelete.push(k);
       }
     });
     keysToDelete.forEach(function(k){
+      console.log('Deleting availability key:', p, k);
       delete sharedData.players[p][k];
       fbWrite('players/'+p+'/'+k, null);
     });
+    // Also directly write null to the canonical key in Firebase regardless
+    fbWrite('players/'+p+'/'+availKey, null);
   });
 
   // Store reset notice
@@ -6255,7 +6264,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.1';
+var APP_VERSION = 'v2.2.2';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
