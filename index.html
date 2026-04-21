@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.8</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.9</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1574,7 +1574,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.8</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.9</span></div>
   </div>
 </div>
 
@@ -5383,13 +5383,17 @@ function showAddSeasonForm(){
 function toggleMatchSection(cardId, section){
   var details = document.getElementById(cardId+'-details');
   var scorecard = document.getElementById(cardId+'-scorecard');
-  if(!details||!scorecard) return;
+  if(!details) return;
   if(section==='details'){
-    details.style.display = details.style.display==='none' ? 'block' : 'none';
-    if(details.style.display==='block') scorecard.style.display='none';
-  } else {
-    scorecard.style.display = scorecard.style.display==='none' ? 'block' : 'none';
-    if(scorecard.style.display==='block') details.style.display='none';
+    var isHidden = details.style.display==='none' || details.style.display==='';
+    // If currently hidden or not set, show it; otherwise hide it
+    var showing = details.offsetParent !== null && details.style.display !== 'none';
+    details.style.display = showing ? 'none' : 'block';
+    if(scorecard && details.style.display==='block') scorecard.style.display='none';
+  } else if(scorecard){
+    var showingS = scorecard.offsetParent !== null && scorecard.style.display !== 'none';
+    scorecard.style.display = showingS ? 'none' : 'block';
+    if(details && scorecard.style.display==='block') details.style.display='none';
   }
 }
 
@@ -5654,6 +5658,21 @@ function findMatchIndex(match){
 }
 
 // ─── ADD/EDIT MATCH FORM ──────────────────────────────────────────────────────
+function applyGroundToMatch(val){
+  var venueInput = document.getElementById('am-venue');
+  var addrInput = document.getElementById('am-address');
+  if(val === 'custom' || val === ''){
+    if(venueInput) venueInput.value = '';
+    if(addrInput) addrInput.value = '';
+    return;
+  }
+  var grounds = getGrounds();
+  var g = grounds[parseInt(val)];
+  if(!g) return;
+  if(venueInput) venueInput.value = g.name||'';
+  if(addrInput) addrInput.value = g.address||'';
+}
+
 function showAddMatchForm(editId, editLeague){
   var isEdit = !!editId;
   if(editLeague) currentMatchLeague = editLeague;
@@ -5698,7 +5717,15 @@ function showAddMatchForm(editId, editLeague){
     +'</select></div>'
     +'<div class="form-field"><label class="form-label">Home Team</label><input class="form-input" id="am-home" value="'+esc(existing.home||ourTeam)+'" placeholder="Home team name" /></div>'
     +'<div class="form-field"><label class="form-label">Away Team</label><input class="form-input" id="am-away" value="'+esc(existing.away||'')+'" placeholder="Away team name" /></div>'
-    +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Venue</label><input class="form-input" id="am-venue" value="'+esc(existing.venue||'')+'" placeholder="Ground name" /></div>'
+    +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Venue</label>'
+    +(getGrounds().length>0
+      ?'<select class="form-input" id="am-venue-select" onchange="applyGroundToMatch(this.value)">'
+        +'<option value="">-- Select a ground --</option>'
+        +getGrounds().map(function(g,gi){ return '<option value="'+gi+'"'+(existing.venue===g.name?' selected':'')+'>'+esc(g.name)+'</option>'; }).join('')
+        +'<option value="custom">✏️ Enter manually</option>'
+        +'</select>'
+      :'')
+    +'<input class="form-input" id="am-venue" value="'+esc(existing.venue||'')+'" placeholder="Ground name" style="margin-top:6px" /></div>'
     +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Address (optional)</label><input class="form-input" id="am-address" value="'+esc(existing.address||'')+'" placeholder="Full address..." /></div>'
     +'<div class="form-field"><label class="form-label">Season</label><input class="form-input" id="am-season" value="'+esc(existing.season||season)+'" placeholder="e.g. 2026" /></div>'
     +'</div>'
@@ -6311,7 +6338,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.8';
+var APP_VERSION = 'v2.2.9';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
