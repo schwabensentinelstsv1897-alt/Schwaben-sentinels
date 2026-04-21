@@ -666,7 +666,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.0</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.1</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1564,7 +1564,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.0</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.1</span></div>
   </div>
 </div>
 
@@ -2587,7 +2587,7 @@ function renderMatches(league){
     }
     // Always inject schedId as the canonical id so Edit/Delete work
     var base = Object.assign({}, m, {id: schedId, _schedIdx: i});
-    if(schedEntry){
+    if(schedEntry && !schedEntry._deleted){
       base = Object.assign(base, {
         date: schedEntry.date || m.date,
         dateISO: schedEntry.dateISO || m.dateISO,
@@ -2597,8 +2597,7 @@ function renderMatches(league){
         venue: schedEntry.venue || m.venue,
         address: schedEntry.address || m.address || '',
         mapLink: schedEntry.mapLink || m.mapLink || '',
-        location: schedEntry.location || m.location,
-        _deleted: schedEntry._deleted || false
+        location: schedEntry.location || m.location
       });
     }
     return base;
@@ -2610,15 +2609,8 @@ function renderMatches(league){
       matchList.push(s);
     }
   });
-  // Apply _deleted flag - but ONLY for manually added matches (m_ prefix)
-  // Hardcoded matches use _deleted on their own id (match_league_idx) but
-  // we need to check if it was intentionally deleted vs just the init entry
-  matchList = matchList.map(function(m, i){
-    // Only apply _deleted if the schedule entry explicitly marks it AND it has no real data
-    var sd = schedData[m.id] || null;
-    if(sd && sd._deleted && !sd.date) return Object.assign({}, m, {_deleted: true});
-    return m;
-  });
+  // Note: _deleted is only applied for manually-added (m_prefix) matches
+  // Hardcoded matches are never deleted - their schedule entry is just cleared
 
   if(matchList.length===0){
     container.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-size:14px">No matches found.</div>';
@@ -6263,7 +6255,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.0';
+var APP_VERSION = 'v2.2.1';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
