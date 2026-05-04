@@ -1138,7 +1138,7 @@ textarea.form-input{resize:vertical;min-height:80px}
       <!-- MATCH PLANNER PANEL (admin only) -->
       <div class="panel" id="panel-planner">
         <div class="sec-hdr" style="flex-wrap:wrap;gap:8px">
-          <div class="sec-title">🗂 Match Planner</div>
+          <div class="sec-title" style="display:flex;align-items:center;gap:10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#c8a84b" opacity="0.15" stroke="#c8a84b" stroke-width="1.5"/><path d="M4.2 8.5 Q8 6 12 12 Q16 18 19.8 15.5" stroke="#c8a84b" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M4.2 15.5 Q8 18 12 12 Q16 6 19.8 8.5" stroke="#c8a84b" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg> Match Planner</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="form-input" id="planner-match-select" onchange="loadPlannerMatch()" style="min-width:200px;max-width:300px">
               <option value="">— Select upcoming match —</option>
@@ -8141,44 +8141,40 @@ function plannerToast(msg){
 
 // ── Get available players from Firebase ──────────────────────────────────
 function getPlannerAvailablePlayers(matchId){
-  // Returns array of player names available for this match
-  var available = [];
-  var players = (sharedData.players||{});
-  // Look for matchId in league data
-  var leagues = ['50overs','t20','friendly'];
-  var matchDate = '';
-  leagues.forEach(function(lg){
-    var matches = lg==='friendly'
-      ? (sharedData.schedule&&sharedData.schedule['friendly']?Object.values(sharedData.schedule['friendly']):[])
-      : (MATCHES[lg]||[]);
-    matches.forEach(function(m,i){
-      var mid = lg+'_'+i;
-      if(mid===matchId) matchDate = m.date||'';
-    });
+  // Parse matchId -> league + idx (e.g. "50overs_2")
+  // idx is always a number matching the MATCHES[league] array position
+  var lastUnder = matchId.lastIndexOf('_');
+  if(lastUnder<0) return Object.keys(sharedData.players||{}).sort();
+  var league = matchId.substring(0, lastUnder);   // e.g. "50overs" or "t20"
+  var idxStr  = matchId.substring(lastUnder+1);   // e.g. "2"
+  var idx     = parseInt(idxStr, 10);
+
+  var players = sharedData.players||{};
+  var allNames = Object.keys(players);
+  var yes=[], maybe=[], no=[], pending=[];
+
+  // Use EXACT same logic as Overview confirmed row:
+  // sharedData.players[player][league+'_'+idx].status
+  allNames.forEach(function(pname){
+    var d = (players[pname]||{})[league+'_'+idx]||{};
+    var s = d.status||'pending';
+    if(s==='yes')         yes.push(pname);
+    else if(s==='maybe')  maybe.push(pname);
+    else if(s==='no')     no.push(pname);
+    else                  pending.push(pname);
   });
-  // Get players who said yes or maybe
-  Object.keys(players).forEach(function(pname){
-    var found = false;
-    // Check sharedData for responses (Firebase stored data)
-    var leagues2 = ['50overs','t20','friendly'];
-    leagues2.forEach(function(lg){
-      var key = lg==='50overs'?'50overs':lg;
-      var schedMatches = sharedData.schedule&&sharedData.schedule[key]
-        ? Object.entries(sharedData.schedule[key])
-        : [];
-      schedMatches.forEach(function(ent){
-        var idx=ent[0], m=ent[1];
-        var mid = lg+'_'+idx;
-        if(mid===matchId){
-          var resp = (m.responses||{})[pname]||{};
-          if(resp.status==='yes'||resp.status==='maybe') found=true;
-        }
-      });
-    });
-    if(found) available.push(pname);
-  });
-  // Fallback: use all players if none found
-  if(available.length===0) available = Object.keys(players);
+
+  console.log('[Planner] matchId='+matchId+' key='+league+'_'+idx,
+    'yes:'+yes.length, 'maybe:'+maybe.length,
+    'no:'+no.length, 'pending:'+pending.length);
+
+  // Return ONLY yes + maybe — same as Overview "Confirmed ✓" count
+  // If literally nobody has responded at all, fall back to full squad
+  var available = yes.concat(maybe);
+  if(yes.length===0 && maybe.length===0 && no.length===0){
+    // No responses at all — show everyone so admin can still plan
+    return allNames.sort();
+  }
   return available.sort();
 }
 
@@ -8283,8 +8279,19 @@ window.loadPlannerMatch = function(){
   loadPlanFromFirebase(PL.matchId, function(plan){
     if(plan.squad) PL.squad=plan.squad;
     else {
-      // Pre-fill with available players
-      available.slice(0,11).forEach(function(p,i){ PL.squad[i]=p; });
+      // Pre-fill XI with yes players first, then maybe to fill gaps
+      var lastU2 = PL.matchId.lastIndexOf('_');
+      var lg2 = PL.matchId.substring(0, lastU2);
+      var ix2 = parseInt(PL.matchId.substring(lastU2+1), 10);
+      var allP2 = Object.keys(sharedData.players||{});
+      var yesP=[], maybeP=[];
+      allP2.forEach(function(p){
+        var s=((sharedData.players[p]||{})[lg2+'_'+ix2]||{}).status||'pending';
+        if(s==='yes') yesP.push(p);
+        else if(s==='maybe') maybeP.push(p);
+      });
+      var fill = yesP.concat(maybeP);
+      fill.slice(0,11).forEach(function(p,i){ PL.squad[i]=p; });
     }
     if(plan.overAssignments) PL.overAssignments=plan.overAssignments;
     if(plan.battingOrder) PL.battingOrder=plan.battingOrder;
@@ -8364,22 +8371,51 @@ function renderCurrentPlannerTab(){
 
 // ── SQUAD TAB ────────────────────────────────────────────────────────────
 function renderPlannerSquad(){
-  var available = getPlannerAvailablePlayers(PL.matchId);
+  // Get availability breakdown using same logic as Overview
+  var lastUnder = PL.matchId.lastIndexOf('_');
+  var league = PL.matchId.substring(0, lastUnder);
+  var idx = parseInt(PL.matchId.substring(lastUnder+1), 10);
+  var allPlayers = Object.keys(sharedData.players||{}).sort();
+  var yes=[], maybe=[], no=[], pending=[];
+  allPlayers.forEach(function(pname){
+    var s = ((sharedData.players[pname]||{})[league+'_'+idx]||{}).status||'pending';
+    if(s==='yes') yes.push(pname);
+    else if(s==='maybe') maybe.push(pname);
+    else if(s==='no') no.push(pname);
+    else pending.push(pname);
+  });
+  var available = getPlannerAvailablePlayers(PL.matchId); // yes+maybe only
+
   var html = '<div style="margin-bottom:14px">';
-  // Availability banner
-  html += '<div class="p11-banner"><span style="font-size:20px">✅</span><div>';
-  html += '<div style="font-size:13px;font-weight:600;color:var(--gold)">'+available.length+' players available for this match</div>';
-  html += '<div style="font-size:11px;color:var(--muted)">Squad is pre-filled based on availability. Adjust below.</div></div></div>';
+  // Availability banner — mirrors Overview counts exactly
+  html += '<div class="p11-banner"><span style="font-size:20px">✅</span><div style="flex:1">';
+  html += '<div style="font-size:13px;font-weight:600;color:var(--gold)">'
+    +yes.length+' confirmed available'
+    +(maybe.length>0?' · '+maybe.length+' maybe':'')
+    +(no.length>0?' · <span style="color:var(--no-t)">'+no.length+' unavailable</span>':'')
+    +'</div>';
+  html += '<div style="font-size:11px;color:var(--muted)">Pre-filled with yes/maybe players. Dropdown shows all — ✓=yes, ?=maybe, ✗=no.</div>';
+  html += '</div></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
   for(var i=0;i<14;i++){
     var isSub=i>=11;
     var label=isSub?'Sub '+(i-10):''+(i+1);
     var taken = PL.squad.filter(function(p,j){return p&&j!==i;});
     var opts='<option value="">— Pick player —</option>';
-    available.forEach(function(p){
-      var dis=taken.indexOf(p)>=0?' disabled style="color:#555"':'';
-      var sel=PL.squad[i]===p?' selected':'';
-      opts+='<option value="'+p+'"'+sel+dis+'>'+p+(taken.indexOf(p)>=0?' ✗':''+(PL.squad.indexOf(p)>=0&&PL.squad.indexOf(p)!==i?' (taken)':''))+'</option>';
+    // Show ALL players in dropdown, grouped and labelled by availability
+    var groups = [
+      {list:yes, prefix:'✓ '},
+      {list:maybe, prefix:'? '},
+      {list:no, prefix:'✗ '},
+      {list:pending, prefix:'– '}
+    ];
+    groups.forEach(function(g){
+      g.list.forEach(function(p){
+        var isTaken = taken.indexOf(p)>=0;
+        var sel = PL.squad[i]===p ? ' selected':'';
+        opts+='<option value="'+p+'"'+sel+(isTaken?' disabled':'')+'>'
+          +g.prefix+p+(isTaken?' (taken)':'')+'</option>';
+      });
     });
     html+='<div class="planner-squad-slot">';
     html+='<span class="planner-slot-num" style="'+(isSub?'color:var(--muted)':'')+'">'+label+'</span>';
@@ -8583,39 +8619,43 @@ function buildFieldSVGHtml(){
   var activeSet=PL.fieldActive[PL.activePreset]||new Set();
   var isFull=activeSet.size>=MAX_FIELDERS_PL;
   var col=PLANNER_PRESET_COLORS[PL.activePreset];
-  var svg='<svg viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">';
-  svg+='<ellipse cx="220" cy="220" rx="210" ry="210" fill="#0b1a0e" stroke="#1e3a1e" stroke-width="1.5"/>';
-  svg+='<ellipse cx="220" cy="220" rx="128" ry="128" fill="none" stroke="#1e4a1e" stroke-width="1" stroke-dasharray="6,4"/>';
-  svg+='<rect x="207" y="168" width="26" height="104" rx="3" fill="#1a2a10" stroke="#3a5020" stroke-width="1"/>';
-  svg+='<line x1="203" y1="190" x2="237" y2="190" stroke="#5a7030" stroke-width="1.5"/>';
-  svg+='<line x1="203" y1="250" x2="237" y2="250" stroke="#5a7030" stroke-width="1.5"/>';
+  // Bigger SVG: 540×540 canvas, centre at 270,270
+  var C=270, R=258, IR=157;
+  var svg='<svg viewBox="0 0 540 540" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px;height:auto;display:block;margin:0 auto">';
+  svg+='<ellipse cx="'+C+'" cy="'+C+'" rx="'+R+'" ry="'+R+'" fill="#0b1a0e" stroke="#1e3a1e" stroke-width="1.5"/>';
+  svg+='<ellipse cx="'+C+'" cy="'+C+'" rx="'+IR+'" ry="'+IR+'" fill="none" stroke="#1e4a1e" stroke-width="1" stroke-dasharray="6,4"/>';
+  // Pitch rectangle – scaled from 26w×104h centred at 220,220 → now at 270,270
+  svg+='<rect x="257" y="218" width="26" height="104" rx="3" fill="#1a2a10" stroke="#3a5020" stroke-width="1"/>';
+  svg+='<line x1="253" y1="240" x2="287" y2="240" stroke="#5a7030" stroke-width="1.5"/>';
+  svg+='<line x1="253" y1="300" x2="287" y2="300" stroke="#5a7030" stroke-width="1.5"/>';
   // Stumps
-  ['215','220','225'].forEach(function(x){
-    svg+='<line x1="'+x+'" y1="180" x2="'+x+'" y2="194" stroke="#c8a050" stroke-width="1.5"/>';
-    svg+='<line x1="'+x+'" y1="246" x2="'+x+'" y2="260" stroke="#c8a050" stroke-width="1.5"/>';
+  ['265','270','275'].forEach(function(x){
+    svg+='<line x1="'+x+'" y1="230" x2="'+x+'" y2="244" stroke="#c8a050" stroke-width="1.5"/>';
+    svg+='<line x1="'+x+'" y1="296" x2="'+x+'" y2="310" stroke="#c8a050" stroke-width="1.5"/>';
   });
-  // Field positions
+  // Field positions — offset all positions by +50 (220→270)
   PLANNER_FIELD_POSITIONS.forEach(function(pos){
     var isActive=activeSet.has(pos.id);
     var isLocked=isFull&&!isActive;
     var opacity=isLocked?'0.35':'1';
     var cursor=isLocked?'not-allowed':'pointer';
-    var r=isActive?9:6;
+    var r=isActive?12:8;
     var fill=isActive?col:'#2a3a4a';
     var stroke=isActive?'#fff':'#3a5060';
-    svg+='<g style="cursor:'+cursor+';opacity:'+opacity+'" onclick="togglePlannerDot(\''+pos.id+'\')">';
-    svg+='<circle cx="'+pos.cx+'" cy="'+pos.cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(isActive?2:1)+'"/>';
-    svg+='<text x="'+pos.cx+'" y="'+(pos.cy+(isActive?22:18))+'" text-anchor="middle" fill="'+(isActive?col:'#4a6a8a')+'" font-size="'+(isActive?9:8)+'" font-family="Outfit,sans-serif" font-weight="'+(isActive?'bold':'normal')+'">';
+    var cx=pos.cx+50, cy=pos.cy+50;
+    svg+='<g style="cursor:'+cursor+';opacity:'+opacity+'" onclick="togglePlannerDot(\'"+pos.id+"\')">';
+    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+( isActive?2:1)+'"/>';
+    svg+='<text x="'+cx+'" y="'+( cy+(isActive?28:22))+'" text-anchor="middle" fill="'+( isActive?col:'#4a6a8a')+'" font-size="'+( isActive?11:9)+'" font-family="Outfit,sans-serif" font-weight="'+( isActive?'bold':'normal')+'">';
     svg+=pos.label+'</text></g>';
   });
-  // Fixed bowler
-  svg+='<circle cx="220" cy="157" r="9" fill="#e05252" stroke="#fff" stroke-width="2"/>';
-  svg+='<text x="220" y="175" text-anchor="middle" fill="#e05252" font-size="8" font-family="Outfit,sans-serif" font-weight="bold">BWL</text>';
-  // Fixed keeper
-  svg+='<circle cx="220" cy="280" r="9" fill="#c8a84b" stroke="#fff" stroke-width="2"/>';
-  svg+='<text x="220" y="298" text-anchor="middle" fill="#c8a84b" font-size="8" font-family="Outfit,sans-serif" font-weight="bold">WK</text>';
+  // Fixed bowler (was cy=157 → 207)
+  svg+='<circle cx="'+C+'" cy="207" r="12" fill="#e05252" stroke="#fff" stroke-width="2"/>';
+  svg+='<text x="'+C+'" y="228" text-anchor="middle" fill="#e05252" font-size="10" font-family="Outfit,sans-serif" font-weight="bold">BWL</text>';
+  // Fixed keeper (was cy=280 → 330)
+  svg+='<circle cx="'+C+'" cy="330" r="12" fill="#c8a84b" stroke="#fff" stroke-width="2"/>';
+  svg+='<text x="'+C+'" y="351" text-anchor="middle" fill="#c8a84b" font-size="10" font-family="Outfit,sans-serif" font-weight="bold">WK</text>';
   // Counter
-  svg+='<text x="220" y="432" text-anchor="middle" fill="'+(isFull?'#e05252':'#7a8899')+'" font-size="11" font-family="Outfit,sans-serif" font-weight="bold">'+activeSet.size+' / '+MAX_FIELDERS_PL+' fielders'+(isFull?' — FULL':'')+'</text>';
+  svg+='<text x="'+C+'" y="530" text-anchor="middle" fill="'+( isFull?'#e05252':'#7a8899')+'" font-size="13" font-family="Outfit,sans-serif" font-weight="bold">'+activeSet.size+' / '+MAX_FIELDERS_PL+' fielders'+(isFull?' — FULL':'')+'</text>';
   svg+='</svg>';
   return svg;
 }
@@ -8706,7 +8746,20 @@ function showP11Locked(content){
 function showP11Published(content,data){
   var squad=data.squad||[];
   var publishedAt=data.publishedAt?new Date(data.publishedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  // Get team logo URL from settings
+  var logoUrl=(sharedData.settings&&sharedData.settings.logoUrl)||'';
   var html='<div>';
+  // Team logo header
+  html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px 16px;background:var(--mid);border:1px solid var(--border);border-radius:14px">';
+  if(logoUrl){
+    html+='<img src="'+logoUrl+'" alt="Club Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(200,168,75,.4);flex-shrink:0" onerror="this.style.display='none'">';
+  } else {
+    html+='<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-family:Bebas Neue,cursive;font-size:18px;color:var(--dark);flex-shrink:0">SS</div>';
+  }
+  html+='<div>';
+  html+='<div style="font-family:Bebas Neue,cursive;font-size:18px;letter-spacing:2px;color:var(--gold)">Schwaben Sentinels</div>';
+  html+='<div style="font-size:11px;color:var(--muted)">TSV Großdeinbach 1897 e.V.</div>';
+  html+='</div></div>';
   html+='<div class="p11-banner"><span style="font-size:24px">📢</span><div>';
   html+='<div style="font-size:14px;font-weight:700;color:var(--gold)">Playing 11 Announced!</div>';
   html+='<div style="font-size:11px;color:var(--muted)">Published '+publishedAt+'</div>';
