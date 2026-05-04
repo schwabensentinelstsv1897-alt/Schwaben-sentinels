@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Schwaben Sentinels – v1.7.0 – Player Availability 2026</title>
+<title>Schwaben Sentinels – v2.3.0 – Player Availability 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -696,7 +696,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.7</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.3.0</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1650,7 +1650,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.7</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.3.0</span></div>
   </div>
 </div>
 
@@ -6436,7 +6436,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.2.7';
+var APP_VERSION = 'v2.3.0';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -8148,7 +8148,9 @@ function getPlannerAvailablePlayers(matchId){
   var leagues = ['50overs','t20','friendly'];
   var matchDate = '';
   leagues.forEach(function(lg){
-    var matches = (sharedData.matches||{})[lg]||[];
+    var matches = lg==='friendly'
+      ? (sharedData.schedule&&sharedData.schedule['friendly']?Object.values(sharedData.schedule['friendly']):[])
+      : (MATCHES[lg]||[]);
     matches.forEach(function(m,i){
       var mid = lg+'_'+i;
       if(mid===matchId) matchDate = m.date||'';
@@ -8157,10 +8159,16 @@ function getPlannerAvailablePlayers(matchId){
   // Get players who said yes or maybe
   Object.keys(players).forEach(function(pname){
     var found = false;
-    leagues.forEach(function(lg){
-      var matches = (sharedData.matches||{})[lg]||[];
-      matches.forEach(function(m,i){
-        var mid = lg+'_'+i;
+    // Check sharedData for responses (Firebase stored data)
+    var leagues2 = ['50overs','t20','friendly'];
+    leagues2.forEach(function(lg){
+      var key = lg==='50overs'?'50overs':lg;
+      var schedMatches = sharedData.schedule&&sharedData.schedule[key]
+        ? Object.entries(sharedData.schedule[key])
+        : [];
+      schedMatches.forEach(function(ent){
+        var idx=ent[0], m=ent[1];
+        var mid = lg+'_'+idx;
         if(mid===matchId){
           var resp = (m.responses||{})[pname]||{};
           if(resp.status==='yes'||resp.status==='maybe') found=true;
@@ -8176,19 +8184,46 @@ function getPlannerAvailablePlayers(matchId){
 
 function getUpcomingMatches(){
   var now = new Date();
+  var today = new Date(now.getFullYear(),now.getMonth(),now.getDate());
   var upcoming = [];
-  var leagues = ['50overs','t20','friendly'];
+  var leagues = ['50overs','t20'];
+  // Read from hardcoded MATCHES constant
   leagues.forEach(function(lg){
-    var matches = (sharedData.matches||{})[lg]||[];
+    var matches = MATCHES[lg]||[];
     matches.forEach(function(m,i){
       if(!m||!m.date) return;
       var parts = m.date.split('.');
       if(parts.length!==3) return;
       var d = new Date(parseInt(parts[2]),parseInt(parts[1])-1,parseInt(parts[0]));
-      if(d>=new Date(now.getFullYear(),now.getMonth(),now.getDate())){
-        upcoming.push({id:lg+'_'+i,label:(m.opponent||'?')+' — '+m.date+' ('+lg+')',date:d,match:m,league:lg,idx:i});
+      if(d>=today){
+        var opp = lg==='50overs'?(m.home==='TSV Großdeinbach'?m.away:m.home):
+                                   (m.home==='TSV Großdeinbach'?m.away:m.home);
+        var locLabel = m.location||'';
+        upcoming.push({
+          id:lg+'_'+i,
+          label:(m.day||'')+(m.day?' — ':'')+opp+' | '+m.date+' ('+locLabel+')',
+          date:d,match:m,league:lg,idx:i
+        });
       }
     });
+  });
+  // Also check friendly matches from sharedData.schedule
+  var friendlyMatches = (sharedData.schedule&&sharedData.schedule['friendly'])
+    ? Object.entries(sharedData.schedule['friendly'])
+    : [];
+  friendlyMatches.forEach(function(ent){
+    var id=ent[0], m=ent[1];
+    if(!m||!m.date) return;
+    var parts = m.date.split('.');
+    if(parts.length!==3) return;
+    var d = new Date(parseInt(parts[2]),parseInt(parts[1])-1,parseInt(parts[0]));
+    if(d>=today){
+      upcoming.push({
+        id:'friendly_'+id,
+        label:(m.opponent||'Friendly')+' — '+m.date+' (Friendly)',
+        date:d,match:m,league:'friendly',idx:id
+      });
+    }
   });
   upcoming.sort(function(a,b){return a.date-b.date;});
   return upcoming;
