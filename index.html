@@ -654,6 +654,36 @@ textarea.form-input{resize:vertical;min-height:80px}
 .squad-bar-inner{height:6px;background:var(--deep);border-radius:3px;overflow:hidden;position:relative;margin-bottom:6px}
 .squad-confirmed-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:3px;transition:width .4s}
 .squad-bar-labels{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+/* ── PLANNER & PLAYING 11 ─────────────────────────────────────────────────── */
+.planner-tab{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;padding:10px 14px;text-transform:uppercase;transition:all .2s;white-space:nowrap;margin-bottom:-2px;}
+.planner-tab:hover{color:var(--text);}
+.planner-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.planner-squad-slot{display:flex;align-items:center;gap:8px;background:var(--mid);border:1px solid var(--border);border-radius:8px;padding:8px 10px;transition:border-color .2s;margin-bottom:8px}
+.planner-squad-slot:hover{border-color:var(--gold);}
+.planner-slot-num{font-family:Bebas Neue,cursive;font-size:18px;color:var(--gold);min-width:24px;text-align:center}
+.planner-squad-slot select{background:transparent;border:none;color:var(--text);font-family:Outfit,sans-serif;font-size:13px;outline:none;width:100%;cursor:pointer}
+.planner-squad-slot select option{background:var(--mid)}
+.bowler-chip-pl{padding:5px 11px;border-radius:20px;border:2px solid transparent;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:#fff;display:inline-block;margin:3px}
+.bowler-chip-pl.selected{box-shadow:0 0 0 2px #fff4}
+.bowler-chip-pl.full{opacity:.5;cursor:not-allowed;text-decoration:line-through}
+.over-block-pl{width:38px;height:36px;border-radius:6px;border:2px solid var(--border);background:var(--mid);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;user-select:none;margin:2px;vertical-align:middle}
+.over-block-pl .ov-n{font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace}
+.over-block-pl .ov-nm{font-size:8px;font-weight:700;max-width:34px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.bat-row-pl{display:flex;align-items:center;gap:10px;background:var(--mid);border:1px solid var(--border);border-radius:9px;padding:9px 12px;cursor:grab;margin-bottom:7px;max-width:520px;transition:all .15s}
+.bat-row-pl.drag-over{border-color:var(--gold);background:rgba(200,168,75,.1)}
+.preset-btn-pl{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--mid);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;margin:3px}
+.preset-btn-pl.active{border-color:var(--gold);color:var(--gold);background:rgba(200,168,75,.1)}
+.field-pos-dot-pl{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.p11-card{background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.p11-num{font-family:Bebas Neue,cursive;font-size:24px;color:var(--gold);min-width:30px;text-align:center}
+.p11-name{font-size:15px;font-weight:600;color:var(--text);flex:1}
+.p11-sub-tag{font-size:10px;background:rgba(200,168,75,.15);color:var(--gold);border:1px solid var(--gold);padding:2px 8px;border-radius:10px}
+.p11-banner{background:linear-gradient(135deg,var(--mid),rgba(200,168,75,.1));border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.save-section-btn{background:var(--green2);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:14px}
+.save-section-btn:hover{filter:brightness(1.15)}
+.planner-notification{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green2);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.planner-notification.show{opacity:1}
 </style>
 </head>
 <body>
@@ -666,7 +696,7 @@ textarea.form-input{resize:vertical;min-height:80px}
         <div class="club-title">Schwaben Sentinels</div>
         <div class="club-sub2">TSV Gr. Deinbach 1897 e.V.</div>
         <div class="club-sub">Player Availability 2026</div>
-        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.3.0</div>
+        <div id="header-version-tag" style="font-size:10px;color:rgba(200,168,75,.6);letter-spacing:1px;margin-top:3px">v2.2.7</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -908,6 +938,8 @@ textarea.form-input{resize:vertical;min-height:80px}
     <button class="tab" id="tab-overview" onclick="switchTab('overview',this)">📊 Overview</button>
     <button class="tab" id="tab-activity" onclick="switchTab('activity',this)">🕐 Activity</button>
     <button class="tab" id="tab-matches" onclick="switchTab('matches',this)">🏏 Matches</button>
+    <button class="tab" id="tab-playing11" onclick="switchTab('playing11',this)">📋 Playing 11</button>
+    <button class="tab" id="tab-planner" onclick="switchTab('planner',this)" style="display:none">🗂 Planner</button>
     <button class="tab" id="tab-team" onclick="switchTab('team',this)">👥 Team</button>
     <button class="tab" id="tab-photos" onclick="switchTab('photos',this)">📸 Photos <span style="font-size:9px;color:var(--gold);vertical-align:middle">soon</span></button>
     <button class="tab" id="tab-help" onclick="switchTab('help',this)">❓ Help</button>
@@ -944,6 +976,8 @@ textarea.form-input{resize:vertical;min-height:80px}
       <button class="mobile-more-item" id="mmi-friendly" onclick="switchTab('friendly',null);closeMoreDrawer()"><span class="mmi-icon">🏏</span> Friendly</button>
       <button class="mobile-more-item" id="mmi-activity" onclick="switchTab('activity',null);closeMoreDrawer()"><span class="mmi-icon">🕐</span> Activity</button>
       <button class="mobile-more-item" id="mmi-matches" onclick="switchTab('matches',null);closeMoreDrawer()"><span class="mmi-icon">📋</span> Matches</button>
+      <button class="mobile-more-item" id="mmi-playing11" onclick="switchTab('playing11',null);closeMoreDrawer()"><span class="mmi-icon">📋</span> Playing 11</button>
+      <button class="mobile-more-item" id="mmi-planner" onclick="switchTab('planner',null);closeMoreDrawer()" style="display:none"><span class="mmi-icon">🗂</span> Planner</button>
       <button class="mobile-more-item" id="mmi-team" onclick="switchTab('team',null);closeMoreDrawer()"><span class="mmi-icon">👥</span> Team</button>
       <button class="mobile-more-item" id="mmi-photos" onclick="switchTab('photos',null);closeMoreDrawer()" style="opacity:.7"><span class="mmi-icon">📸</span> Photos <span style="font-size:10px;color:var(--gold);margin-left:4px">soon</span></button>
       <button class="mobile-more-item" id="mmi-bugs" onclick="switchTab('bugs',null);closeMoreDrawer()"><span class="mmi-icon">🐛</span> Report Bug</button>
@@ -1080,6 +1114,48 @@ textarea.form-input{resize:vertical;min-height:80px}
           </select>
         </div>
         <div id="team-grid"></div>
+      </div>
+
+
+      <!-- PLAYING 11 PANEL -->
+      <div class="panel" id="panel-playing11">
+        <div class="sec-hdr">
+          <div class="sec-title">📋 Playing 11</div>
+        </div>
+        <div id="p11-match-selector" style="margin-bottom:16px;display:none">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:4px">Select Match</label>
+          <select class="form-input" id="p11-match-select" onchange="renderPlaying11()" style="max-width:340px"></select>
+        </div>
+        <div id="panel-p11-content">
+          <div style="text-align:center;padding:40px 20px;color:var(--muted)">
+            <div style="font-size:40px;margin-bottom:12px">🏏</div>
+            <div style="font-size:15px;font-weight:600;color:var(--soft);margin-bottom:8px">Playing 11 not yet announced</div>
+            <div style="font-size:13px;color:var(--muted)">The captain will publish the squad before each match.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MATCH PLANNER PANEL (admin only) -->
+      <div class="panel" id="panel-planner">
+        <div class="sec-hdr" style="flex-wrap:wrap;gap:8px">
+          <div class="sec-title">🗂 Match Planner</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="form-input" id="planner-match-select" onchange="loadPlannerMatch()" style="min-width:200px;max-width:300px">
+              <option value="">— Select upcoming match —</option>
+            </select>
+            <button class="admin-btn" onclick="exportPlannerPDF()" style="white-space:nowrap">⬇ Export PDF</button>
+          </div>
+        </div>
+        <!-- Planner tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px;overflow-x:auto">
+          <button class="planner-tab active" id="ptab-squad" onclick="switchPlannerTab('squad')">👥 Squad</button>
+          <button class="planner-tab" id="ptab-bowling" onclick="switchPlannerTab('bowling')">🎯 Bowling</button>
+          <button class="planner-tab" id="ptab-batting" onclick="switchPlannerTab('batting')">🏏 Batting</button>
+          <button class="planner-tab" id="ptab-fielding" onclick="switchPlannerTab('fielding')">🟢 Fielding</button>
+        </div>
+        <div id="panel-planner-content">
+          <div style="text-align:center;padding:40px;color:var(--muted)">Select an upcoming match above to start planning.</div>
+        </div>
       </div>
 
       <!-- PHOTOS PANEL -->
@@ -1574,7 +1650,7 @@ textarea.form-input{resize:vertical;min-height:80px}
           </div>
         </div>
      
-    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.3.0</span></div>
+    <div class="app-footer">Created by <span style="color:var(--gold)">iPrade</span> · Schwaben Sentinels · <span style="color:var(--gold)">v2.2.7</span></div>
   </div>
 </div>
 
@@ -2517,6 +2593,9 @@ function logout(){
   currentPlayer=null;
   pinBuffer='';pinFirst='';
   adminUnlocked=false;
+  var ptab=document.getElementById('tab-planner');if(ptab)ptab.style.display='none';
+  var mmip=document.getElementById('mmi-planner');if(mmip)mmip.style.display='none';
+  if(currentTab==='planner')switchTab('overview',null);
   adminPinBuffer='';
 
   // Reset dropdown
@@ -2602,6 +2681,8 @@ window.switchTab=function(tab,btn){
     setTimeout(syncHelpLogo, 100);
   }
   else if(tab==='matches'){switchMatchLeague(currentMatchLeague);}
+  else if(tab==='playing11'){renderPlaying11();}
+  else if(tab==='planner'){initPlanner();}
 };
 
 function isMatchLocked(dateStr){
@@ -2766,16 +2847,7 @@ function buildCard(league,idx,match,matchId){
 
   var availHtml;
   if(locked){
-    var isAdminViewLock = adminUnlocked || ((sharedData.permissions||{}).admins||[]).indexOf(currentPlayer)>=0;
-    availHtml='<div class="locked-msg" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
-      +'<span>🔒 Locked — within 16 days of match.</span>'
-      +(isAdminViewLock
-        ?'<div style="display:flex;gap:6px">'
-          +'<button class="admin-btn admin-btn-gold" data-l="'+league+'" data-i="'+idx+'" onclick="unlockMatchForAll(this.dataset.l, parseInt(this.dataset.i))" style="padding:4px 12px;font-size:11px">🔓 Unlock All</button>'
-          +'<button class="admin-btn admin-btn-gray" data-l="'+league+'" data-i="'+idx+'" data-p="'+esc(currentPlayer)+'" onclick="adminUnlockMatch(this.dataset.l, parseInt(this.dataset.i), this.dataset.p)" style="padding:4px 12px;font-size:11px">🔓 Unlock Me</button>'
-          +'</div>'
-        :'<span style="font-size:11px;color:var(--muted)">Contact admin</span>')
-      +'</div>'
+    availHtml='<div class="locked-msg">Locked - within 16 days of match. Contact admin to unlock.</div>'
       +'<div class="avail-btns" style="opacity:.4;pointer-events:none">'
       +'<button class="abtn abtn-yes '+(my.status==='yes'?'active':'')+'">Available</button>'
       +'<button class="abtn abtn-maybe '+(my.status==='maybe'?'active':'')+'">Maybe</button>'
@@ -3894,6 +3966,8 @@ function onAdminPinDigit(){
     var err=document.getElementById('admin-pin-error');
     if(hashPin(adminPinBuffer)===getAdminPinHash()){
       adminUnlocked=true;adminPinBuffer='';
+      var ptab=document.getElementById('tab-planner');if(ptab)ptab.style.display='';
+      var mmip=document.getElementById('mmi-planner');if(mmip)mmip.style.display='';
       document.getElementById('admin-lock').style.display='none';
       document.getElementById('admin-dashboard').style.display='block';
       renderAdminPlayers();loadSettingsIntoForm();renderGroundsAdmin();renderRoleAssignment();updateLastBackupLabel();
@@ -5392,17 +5466,13 @@ function showAddSeasonForm(){
 function toggleMatchSection(cardId, section){
   var details = document.getElementById(cardId+'-details');
   var scorecard = document.getElementById(cardId+'-scorecard');
-  if(!details) return;
+  if(!details||!scorecard) return;
   if(section==='details'){
-    var isHidden = details.style.display==='none' || details.style.display==='';
-    // If currently hidden or not set, show it; otherwise hide it
-    var showing = details.offsetParent !== null && details.style.display !== 'none';
-    details.style.display = showing ? 'none' : 'block';
-    if(scorecard && details.style.display==='block') scorecard.style.display='none';
-  } else if(scorecard){
-    var showingS = scorecard.offsetParent !== null && scorecard.style.display !== 'none';
-    scorecard.style.display = showingS ? 'none' : 'block';
-    if(details && scorecard.style.display==='block') details.style.display='none';
+    details.style.display = details.style.display==='none' ? 'block' : 'none';
+    if(details.style.display==='block') scorecard.style.display='none';
+  } else {
+    scorecard.style.display = scorecard.style.display==='none' ? 'block' : 'none';
+    if(scorecard.style.display==='block') details.style.display='none';
   }
 }
 
@@ -5667,45 +5737,6 @@ function findMatchIndex(match){
 }
 
 // ─── ADD/EDIT MATCH FORM ──────────────────────────────────────────────────────
-function unlockMatchForAll(league, idx){
-  if(!confirm('Unlock this match for ALL players? Everyone can re-vote.')) return;
-  var players = Object.keys(sharedData.players||{});
-  if(!sharedData.adminUnlocks) sharedData.adminUnlocks={};
-  players.forEach(function(p){
-    var key = league+'_'+idx+'_'+p;
-    sharedData.adminUnlocks[key] = true;
-    fbWrite('adminUnlocks/'+key, true);
-  });
-  saveData();
-  renderMatches(league);
-  showToast('Match unlocked for all players ✅');
-}
-
-function adminUnlockMatch(league, idx, player){
-  if(!sharedData.adminUnlocks) sharedData.adminUnlocks={};
-  var key = league+'_'+idx+'_'+player;
-  sharedData.adminUnlocks[key] = true;
-  fbWrite('adminUnlocks/'+key, true);
-  saveData();
-  renderMatches(league);
-  showToast('Unlocked for '+player+' ✅');
-}
-
-function applyGroundToMatch(val){
-  var venueInput = document.getElementById('am-venue');
-  var addrInput = document.getElementById('am-address');
-  if(val === 'custom' || val === ''){
-    if(venueInput) venueInput.value = '';
-    if(addrInput) addrInput.value = '';
-    return;
-  }
-  var grounds = getGrounds();
-  var g = grounds[parseInt(val)];
-  if(!g) return;
-  if(venueInput) venueInput.value = g.name||'';
-  if(addrInput) addrInput.value = g.address||'';
-}
-
 function showAddMatchForm(editId, editLeague){
   var isEdit = !!editId;
   if(editLeague) currentMatchLeague = editLeague;
@@ -5750,15 +5781,7 @@ function showAddMatchForm(editId, editLeague){
     +'</select></div>'
     +'<div class="form-field"><label class="form-label">Home Team</label><input class="form-input" id="am-home" value="'+esc(existing.home||ourTeam)+'" placeholder="Home team name" /></div>'
     +'<div class="form-field"><label class="form-label">Away Team</label><input class="form-input" id="am-away" value="'+esc(existing.away||'')+'" placeholder="Away team name" /></div>'
-    +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Venue</label>'
-    +(getGrounds().length>0
-      ?'<select class="form-input" id="am-venue-select" onchange="applyGroundToMatch(this.value)">'
-        +'<option value="">-- Select a ground --</option>'
-        +getGrounds().map(function(g,gi){ return '<option value="'+gi+'"'+(existing.venue===g.name?' selected':'')+'>'+esc(g.name)+'</option>'; }).join('')
-        +'<option value="custom">✏️ Enter manually</option>'
-        +'</select>'
-      :'')
-    +'<input class="form-input" id="am-venue" value="'+esc(existing.venue||'')+'" placeholder="Ground name" style="margin-top:6px" /></div>'
+    +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Venue</label><input class="form-input" id="am-venue" value="'+esc(existing.venue||'')+'" placeholder="Ground name" /></div>'
     +'<div class="form-field" style="grid-column:1/-1"><label class="form-label">Address (optional)</label><input class="form-input" id="am-address" value="'+esc(existing.address||'')+'" placeholder="Full address..." /></div>'
     +'<div class="form-field"><label class="form-label">Season</label><input class="form-input" id="am-season" value="'+esc(existing.season||season)+'" placeholder="e.g. 2026" /></div>'
     +'</div>'
@@ -5802,7 +5825,11 @@ function saveMatch(editId){
   var dateFormatted = new Date(dateISO).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('.');
   var address = document.getElementById('am-address')?document.getElementById('am-address').value.trim():'';
 
+  // Detect if date or venue changed (for availability reset)
   var isEdit = !!editId;
+  var old = isEdit ? (sharedData.schedule[key][id]||{}) : {};
+  var dateChanged = isEdit && old.dateISO && old.dateISO !== dateISO;
+  var venueChanged = isEdit && old.venue && old.venue !== venue;
 
   var matchData = {id:id,day:day,dateISO:dateISO,date:dateFormatted,time:time,
     league:league,season:season,home:home,away:away,venue:venue,address:address,location:location};
@@ -5814,7 +5841,45 @@ function saveMatch(editId){
   // Write to Firebase directly so all tabs reflect immediately
   fbWrite('schedule/'+key+'/'+id, matchData);
 
+  // ── Reset availability if date or venue changed ──────────────────────────
+  if(dateChanged || venueChanged){
+    var changeReason = [];
+    if(dateChanged) changeReason.push('date changed to '+dateFormatted);
+    if(venueChanged) changeReason.push('venue changed to '+venue);
+    var notice = '⚠️ '+changeReason.join(' & ')+'. Please re-confirm your availability.';
 
+    // Find match index to reset the right key
+    var matchLeague = league;
+    var hardMatches = MATCHES[matchLeague]||[];
+    var matchIdx = hardMatches.findIndex(function(m){ return m.date===old.date; });
+    // Also check schedule-based idx
+    var schedIdx = Object.keys(sharedData.schedule[key]||{}).indexOf(id);
+
+    // Store reset notice in Firebase for all players to see on next login
+    if(!sharedData.matchResets) sharedData.matchResets = {};
+    sharedData.matchResets[id] = {
+      matchId: id, league: league, key: key,
+      notice: notice, dateFormatted: dateFormatted, venue: venue,
+      resetAt: new Date().toISOString(), resetBy: currentPlayer
+    };
+    fbWrite('matchResets/'+id, sharedData.matchResets[id]);
+
+    // Reset all player availability for this match
+    var resetParts = (id||'').split('_');
+    var resetIdx = parseInt(resetParts[resetParts.length-1]);
+    var resetAvailKey = !isNaN(resetIdx) ? (league+'_'+resetIdx) : id;
+    var resetPlayers = Object.keys(sharedData.players||{});
+    resetPlayers.forEach(function(p){
+      var pd = sharedData.players[p]||{};
+      [resetAvailKey, id].forEach(function(k){
+        if(pd[k]){
+          delete sharedData.players[p][k];
+          fbWrite('players/'+p+'/'+k, null);
+        }
+      });
+    });
+    showToast('Match updated — player availability reset due to '+changeReason.join(' & '));
+  }
 
   saveData();
   document.getElementById('add-match-modal').remove();
@@ -6371,7 +6436,7 @@ function deleteCustomRole(i){
 
 
 // ─── v1.3 SECURITY MODEL ──────────────────────────────────────────────────────
-var APP_VERSION = 'v2.3.0';
+var APP_VERSION = 'v2.2.7';
 var changePinBuffer = '', changePinFirst = '';
 
 // Hash a password/PIN the same way as existing hashPin
@@ -8021,6 +8086,729 @@ document.addEventListener('DOMContentLoaded',function(){
   if(ni)ni.addEventListener('keydown',function(e){if(e.key==='Enter')handleNameNext();});
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATCH PLANNER + PLAYING 11 — v2.3.0
+// Firebase path: ss2026/matchPlans/{matchId}/
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PLANNER_BOWLER_COLORS = [
+  '#e05252','#4a9eff','#2ea84f','#f0c040','#c87eff','#ff9900',
+  '#ff6eb4','#00d4aa','#ff7043','#64b5f6','#aed581','#ffb300','#ba68c8','#4db6ac'
+];
+const PLANNER_FIELD_POSITIONS = [
+  {id:'slip1',label:'1st Slip',cx:255,cy:274},{id:'slip2',label:'2nd Slip',cx:275,cy:260},
+  {id:'gully',label:'Gully',cx:294,cy:244},{id:'point',label:'Point',cx:322,cy:218},
+  {id:'cover',label:'Cover',cx:302,cy:182},{id:'midoff',label:'Mid Off',cx:267,cy:156},
+  {id:'midon',label:'Mid On',cx:173,cy:156},{id:'midwkt',label:'Mid Wicket',cx:142,cy:184},
+  {id:'sqleg',label:'Square Leg',cx:122,cy:218},{id:'legslip',label:'Leg Slip',cx:196,cy:275},
+  {id:'finleg',label:'Fine Leg',cx:168,cy:372},{id:'thirdman',label:'Third Man',cx:368,cy:338},
+  {id:'deepcov',label:'Deep Cover',cx:362,cy:152},{id:'longoff',label:'Long Off',cx:268,cy:80},
+  {id:'longon',label:'Long On',cx:172,cy:80},{id:'deepmidw',label:'Deep Mid Wkt',cx:80,cy:172},
+  {id:'deepsqleg',label:'Deep Sq Leg',cx:86,cy:272},{id:'cow',label:'Cow Corner',cx:112,cy:354},
+  {id:'sweeper',label:'Sweeper',cx:396,cy:218}
+];
+const PLANNER_PRESET_NAMES = ['Powerplay','Middle Overs','Death Overs','Spin Attack','Pace Attack','Custom'];
+const PLANNER_PRESET_COLORS = ['#4a9eff','#2ea84f','#e05252','#c87eff','#ff9900','#c8a84b'];
+const MAX_FIELDERS_PL = 9;
+
+// ── State ────────────────────────────────────────────────────────────────
+var PL = {
+  matchId: '',
+  squad: Array(14).fill(''),      // 0-10 = XI, 11-13 = subs
+  overAssignments: {},             // over# -> squadIdx
+  activeBowler: 0,
+  battingOrder: [],
+  battingRoles: {},
+  fieldActive: PLANNER_PRESET_NAMES.map(()=>new Set()),
+  customAssign: {},
+  activePreset: 0,
+  customPresetName: 'Custom',
+  published: false,
+  publishedAt: null,
+  currentPlannerTab: 'squad',
+};
+
+function plannerToast(msg){
+  var el = document.getElementById('planner-toast') || (function(){
+    var d=document.createElement('div');
+    d.id='planner-toast';d.className='planner-notification';
+    document.body.appendChild(d);return d;
+  })();
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── Get available players from Firebase ──────────────────────────────────
+function getPlannerAvailablePlayers(matchId){
+  // Returns array of player names available for this match
+  var available = [];
+  var players = (sharedData.players||{});
+  // Look for matchId in league data
+  var leagues = ['50overs','t20','friendly'];
+  var matchDate = '';
+  leagues.forEach(function(lg){
+    var matches = (sharedData.matches||{})[lg]||[];
+    matches.forEach(function(m,i){
+      var mid = lg+'_'+i;
+      if(mid===matchId) matchDate = m.date||'';
+    });
+  });
+  // Get players who said yes or maybe
+  Object.keys(players).forEach(function(pname){
+    var found = false;
+    leagues.forEach(function(lg){
+      var matches = (sharedData.matches||{})[lg]||[];
+      matches.forEach(function(m,i){
+        var mid = lg+'_'+i;
+        if(mid===matchId){
+          var resp = (m.responses||{})[pname]||{};
+          if(resp.status==='yes'||resp.status==='maybe') found=true;
+        }
+      });
+    });
+    if(found) available.push(pname);
+  });
+  // Fallback: use all players if none found
+  if(available.length===0) available = Object.keys(players);
+  return available.sort();
+}
+
+function getUpcomingMatches(){
+  var now = new Date();
+  var upcoming = [];
+  var leagues = ['50overs','t20','friendly'];
+  leagues.forEach(function(lg){
+    var matches = (sharedData.matches||{})[lg]||[];
+    matches.forEach(function(m,i){
+      if(!m||!m.date) return;
+      var parts = m.date.split('.');
+      if(parts.length!==3) return;
+      var d = new Date(parseInt(parts[2]),parseInt(parts[1])-1,parseInt(parts[0]));
+      if(d>=new Date(now.getFullYear(),now.getMonth(),now.getDate())){
+        upcoming.push({id:lg+'_'+i,label:(m.opponent||'?')+' — '+m.date+' ('+lg+')',date:d,match:m,league:lg,idx:i});
+      }
+    });
+  });
+  upcoming.sort(function(a,b){return a.date-b.date;});
+  return upcoming;
+}
+
+// ── Firebase plan load/save ───────────────────────────────────────────────
+function loadPlanFromFirebase(matchId, cb){
+  if(!window.__db){cb({});return;}
+  window.__fbGet(window.__fbRef(window.__db,'ss2026/matchPlans/'+matchId))
+    .then(function(s){cb(s&&s.exists()?s.val():{});})
+    .catch(function(){cb({});});
+}
+function savePlanToFirebase(matchId, data){
+  if(!window.__db) return Promise.resolve();
+  return window.__fbSet(window.__fbRef(window.__db,'ss2026/matchPlans/'+matchId), data);
+}
+
+// ── initPlanner ──────────────────────────────────────────────────────────
+function initPlanner(){
+  var upcoming = getUpcomingMatches();
+  var sel = document.getElementById('planner-match-select');
+  if(!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— Select upcoming match —</option>';
+  upcoming.forEach(function(u){
+    var opt=document.createElement('option');
+    opt.value=u.id; opt.textContent=u.label;
+    if(u.id===cur) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  if(!PL.matchId && upcoming.length>0){
+    sel.value=upcoming[0].id;
+    loadPlannerMatch();
+  } else if(PL.matchId){
+    sel.value=PL.matchId;
+    renderCurrentPlannerTab();
+  }
+}
+
+window.loadPlannerMatch = function(){
+  var sel = document.getElementById('planner-match-select');
+  if(!sel) return;
+  PL.matchId = sel.value;
+  if(!PL.matchId){
+    document.getElementById('panel-planner-content').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Select an upcoming match above to start planning.</div>';
+    return;
+  }
+  // Reset state
+  PL.squad=Array(14).fill('');
+  PL.overAssignments={};PL.activeBowler=0;PL.battingOrder=[];PL.battingRoles={};
+  PL.fieldActive=PLANNER_PRESET_NAMES.map(()=>new Set());
+  PL.customAssign={};PL.activePreset=0;PL.published=false;PL.publishedAt=null;
+
+  // Load available players first, then plan
+  var available = getPlannerAvailablePlayers(PL.matchId);
+
+  loadPlanFromFirebase(PL.matchId, function(plan){
+    if(plan.squad) PL.squad=plan.squad;
+    else {
+      // Pre-fill with available players
+      available.slice(0,11).forEach(function(p,i){ PL.squad[i]=p; });
+    }
+    if(plan.overAssignments) PL.overAssignments=plan.overAssignments;
+    if(plan.battingOrder) PL.battingOrder=plan.battingOrder;
+    if(plan.battingRoles) PL.battingRoles=plan.battingRoles;
+    if(plan.fieldActive) PL.fieldActive=(plan.fieldActive||[]).map(function(a){return new Set(a||[]);});
+    while(PL.fieldActive.length<PLANNER_PRESET_NAMES.length) PL.fieldActive.push(new Set());
+    if(plan.customAssign) PL.customAssign=plan.customAssign;
+    if(plan.published!==undefined) PL.published=plan.published;
+    if(plan.publishedAt) PL.publishedAt=plan.publishedAt;
+    switchPlannerTab(PL.currentPlannerTab||'squad');
+  });
+};
+
+function serializePlan(){
+  return {
+    squad: PL.squad,
+    overAssignments: PL.overAssignments,
+    battingOrder: PL.battingOrder,
+    battingRoles: PL.battingRoles,
+    fieldActive: PL.fieldActive.map(function(s){return Array.from(s);}),
+    customAssign: PL.customAssign,
+    customPresetName: PL.customPresetName,
+    published: PL.published,
+    publishedAt: PL.publishedAt,
+  };
+}
+
+window.savePlannerSection = function(section){
+  if(!PL.matchId){plannerToast('Select a match first');return;}
+  savePlanToFirebase(PL.matchId, serializePlan())
+    .then(function(){ plannerToast('✓ '+section+' saved!'); })
+    .catch(function(){ plannerToast('Save failed — check connection'); });
+};
+
+window.publishPlaying11 = function(){
+  if(!PL.matchId){plannerToast('Select a match first');return;}
+  PL.published=true;
+  PL.publishedAt=new Date().toISOString();
+  // Write published playing11 to Firebase (accessible by all)
+  var p11Data = {
+    matchId: PL.matchId,
+    squad: PL.squad,
+    published: true,
+    publishedAt: PL.publishedAt,
+    publishedBy: currentPlayer||'admin'
+  };
+  savePlanToFirebase(PL.matchId, serializePlan())
+    .then(function(){
+      return window.__fbSet(window.__fbRef(window.__db,'ss2026/playing11/'+PL.matchId), p11Data);
+    })
+    .then(function(){
+      plannerToast('✅ Playing 11 published! Players can now see it.');
+      logActivity('Published Playing 11 for match: '+PL.matchId);
+    })
+    .catch(function(){ plannerToast('Publish failed'); });
+};
+
+// ── Planner Tab Switching ─────────────────────────────────────────────────
+window.switchPlannerTab = function(tab){
+  PL.currentPlannerTab = tab;
+  document.querySelectorAll('.planner-tab').forEach(function(b){b.classList.remove('active');});
+  var btn=document.getElementById('ptab-'+tab); if(btn)btn.classList.add('active');
+  renderCurrentPlannerTab();
+};
+
+function renderCurrentPlannerTab(){
+  if(!PL.matchId){
+    document.getElementById('panel-planner-content').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Select an upcoming match above to start planning.</div>';
+    return;
+  }
+  var t = PL.currentPlannerTab;
+  if(t==='squad') renderPlannerSquad();
+  else if(t==='bowling') renderPlannerBowling();
+  else if(t==='batting') renderPlannerBatting();
+  else if(t==='fielding') renderPlannerFielding();
+}
+
+// ── SQUAD TAB ────────────────────────────────────────────────────────────
+function renderPlannerSquad(){
+  var available = getPlannerAvailablePlayers(PL.matchId);
+  var html = '<div style="margin-bottom:14px">';
+  // Availability banner
+  html += '<div class="p11-banner"><span style="font-size:20px">✅</span><div>';
+  html += '<div style="font-size:13px;font-weight:600;color:var(--gold)">'+available.length+' players available for this match</div>';
+  html += '<div style="font-size:11px;color:var(--muted)">Squad is pre-filled based on availability. Adjust below.</div></div></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
+  for(var i=0;i<14;i++){
+    var isSub=i>=11;
+    var label=isSub?'Sub '+(i-10):''+(i+1);
+    var taken = PL.squad.filter(function(p,j){return p&&j!==i;});
+    var opts='<option value="">— Pick player —</option>';
+    available.forEach(function(p){
+      var dis=taken.indexOf(p)>=0?' disabled style="color:#555"':'';
+      var sel=PL.squad[i]===p?' selected':'';
+      opts+='<option value="'+p+'"'+sel+dis+'>'+p+(taken.indexOf(p)>=0?' ✗':''+(PL.squad.indexOf(p)>=0&&PL.squad.indexOf(p)!==i?' (taken)':''))+'</option>';
+    });
+    html+='<div class="planner-squad-slot">';
+    html+='<span class="planner-slot-num" style="'+(isSub?'color:var(--muted)':'')+'">'+label+'</span>';
+    html+='<select data-idx="'+i+'" onchange="onPlannerSquadChange('+i+',this.value)">'+opts+'</select>';
+    if(isSub) html+='<span class="p11-sub-tag">SUB</span>';
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">';
+  html+='<button class="save-section-btn" onclick="savePlannerSection(\'Squad\')">💾 Save Squad</button>';
+  html+='<button class="save-section-btn" style="background:var(--gold);color:#000" onclick="publishPlaying11()">📢 Publish Playing 11</button>';
+  html+='</div>';
+  if(PL.published) html+='<div style="margin-top:10px;font-size:12px;color:var(--green-pale)">✅ Published on '+(PL.publishedAt?new Date(PL.publishedAt).toLocaleString():'')+'</div>';
+  html+='</div>';
+  document.getElementById('panel-planner-content').innerHTML=html;
+}
+
+window.onPlannerSquadChange=function(idx,val){
+  PL.squad[idx]=val;
+  renderPlannerSquad();
+};
+
+// ── BOWLING TAB ───────────────────────────────────────────────────────────
+function renderPlannerBowling(){
+  var totalOvers=50, maxPB=10, pp=10;
+  var html='<div>';
+  // Bowler chips
+  html+='<div style="margin-bottom:12px"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px">Active Bowler:</label><div id="pl-bowler-chips" style="margin-top:6px">';
+  PL.squad.slice(0,11).forEach(function(name,i){
+    if(!name) return;
+    var count=Object.values(PL.overAssignments).filter(function(v){return v===i;}).length;
+    var full=count>=maxPB;
+    var col=PLANNER_BOWLER_COLORS[i%PLANNER_BOWLER_COLORS.length];
+    var selected=i===PL.activeBowler;
+    html+='<span class="bowler-chip-pl'+(selected?' selected':'')+(full?' full':'')+'" style="background:'+col+';border-color:'+(selected?'#fff':col)+'" onclick="setPlannerBowler('+i+')">';
+    html+=plannerShortName(name)+(count>0?' ('+count+')':'')+'</span>';
+  });
+  html+='</div></div>';
+  // Over grid
+  html+='<div style="background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">';
+  html+='<div style="margin-bottom:8px;font-size:10px;color:#4a9eff;background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:4px;padding:2px 7px;display:inline-block">🔵 Powerplay (1-10)</div>';
+  html+='<div style="margin-bottom:4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Overs 1–25</div><div>';
+  for(var o=1;o<=25;o++) html+=overBlockHtml(o,pp);
+  html+='</div><div style="margin:8px 0 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Overs 26–50</div><div>';
+  for(var o=26;o<=50;o++) html+=overBlockHtml(o,pp);
+  html+='</div></div>';
+  // Stats
+  var assigned=Object.keys(PL.overAssignments).length;
+  var rem=totalOvers-assigned;
+  html+='<div style="display:flex;gap:16px;margin-bottom:14px;background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:12px 16px;flex-wrap:wrap">';
+  html+='<div><div style="font-family:Bebas Neue,cursive;font-size:26px;color:var(--gold)">'+assigned+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Assigned</div></div>';
+  html+='<div><div style="font-family:Bebas Neue,cursive;font-size:26px;color:'+(rem===0?'var(--green-pale)':rem<0?'var(--no-t)':'var(--gold)')+'">'+rem+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Remaining</div></div>';
+  html+='</div>';
+  html+='<button class="save-section-btn" onclick="savePlannerSection(\'Bowling\')">💾 Save Bowling</button>';
+  html+='</div>';
+  document.getElementById('panel-planner-content').innerHTML=html;
+}
+
+function overBlockHtml(o, pp){
+  var asgn=PL.overAssignments[o];
+  var col=asgn!==undefined?PLANNER_BOWLER_COLORS[asgn%PLANNER_BOWLER_COLORS.length]:null;
+  var sn=asgn!==undefined?plannerShortName(PL.squad[asgn]||''):'';
+  var style=col?'border-color:'+col+';background:'+col+'22;':'';
+  return '<div class="over-block-pl" style="'+style+'" onclick="togglePlannerOver('+o+')">'
+    +'<span class="ov-n" style="'+(o<=pp?'color:#4a9eff88;':'')+'">'+o+'</span>'
+    +'<span class="ov-nm" style="'+(col?'color:'+col:'')+'">'+(sn||'')+'</span></div>';
+}
+
+window.setPlannerBowler=function(i){
+  var name=PL.squad[i];if(!name)return;
+  var count=Object.values(PL.overAssignments).filter(function(v){return v===i;}).length;
+  if(count>=10)return;
+  PL.activeBowler=i;
+  renderPlannerBowling();
+};
+
+window.togglePlannerOver=function(o){
+  var cur=PL.overAssignments[o];
+  var bCount=Object.values(PL.overAssignments).filter(function(v){return v===PL.activeBowler;}).length;
+  if(cur===PL.activeBowler){delete PL.overAssignments[o];}
+  else if(cur!==undefined){
+    if(bCount>=10){plannerToast('Bowler at max 10 overs!');return;}
+    PL.overAssignments[o]=PL.activeBowler;
+  } else {
+    if(bCount>=10){plannerToast('Bowler at max 10 overs!');return;}
+    PL.overAssignments[o]=PL.activeBowler;
+  }
+  renderPlannerBowling();
+};
+
+// ── BATTING TAB ───────────────────────────────────────────────────────────
+function renderPlannerBatting(){
+  var xi=PL.squad.slice(0,11).map(function(p,i){return {name:p,idx:i};}).filter(function(o){return o.name;});
+  var order=PL.battingOrder.filter(function(i){return PL.squad[i];}).map(function(i){return{name:PL.squad[i],idx:i};});
+  xi.forEach(function(o){if(!order.find(function(x){return x.idx===o.idx;}))order.push(o);});
+  var html='<div>';
+  order.forEach(function(player,pos){
+    var tClass=pos<2?'opener':pos<5?'middle':pos<8?'lower':'tail';
+    var tLabel=pos<2?'Opener':pos<5?'Middle':pos<8?'Lower':'Tail';
+    var role=PL.battingRoles[player.idx]||'';
+    html+='<div class="bat-row-pl" draggable="true" data-pos="'+pos+'" ondragstart="plBatDragStart(event,'+pos+')" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="plBatDrop(event,'+pos+')">';
+    html+='<span style="color:var(--muted);font-size:14px;cursor:grab">⠿</span>';
+    html+='<span style="font-family:Bebas Neue,cursive;font-size:18px;color:var(--gold);min-width:26px;text-align:center">'+(pos+1)+'</span>';
+    html+='<span style="flex:1;font-size:13px;font-weight:600">'+player.name+'</span>';
+    html+='<span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;background:rgba(200,168,75,.15);color:var(--gold);border:1px solid rgba(200,168,75,.3)">'+tLabel+'</span>';
+    html+='<select style="background:var(--mid);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Outfit,sans-serif;font-size:11px;padding:4px 7px;outline:none" onchange="PL.battingRoles['+player.idx+']=this.value">';
+    ['','Opener','Anchor','Stroke Player','All-rounder','Pinch Hitter','Finisher','Tail-ender'].forEach(function(r){
+      html+='<option'+(role===r?' selected':'')+'>'+r+'</option>';
+    });
+    html+='</select></div>';
+  });
+  html+='<button class="save-section-btn" onclick="PL.battingOrder=Array.from(document.querySelectorAll(\'.bat-row-pl\')).map(function(r){return parseInt(r.dataset.pos);}).map(function(pos){var els=document.querySelectorAll(\'.bat-row-pl\');return parseInt(els[pos]?els[pos].dataset.origIdx||-1:-1);});savePlannerSection(\'Batting\')">💾 Save Batting Order</button>';
+  html+='</div>';
+  document.getElementById('panel-planner-content').innerHTML=html;
+  // Store original indices
+  document.querySelectorAll('.bat-row-pl').forEach(function(r,i){r.dataset.origIdx=order[i]?order[i].idx:-1;});
+}
+
+window.plBatDragStart=function(e,pos){e.dataTransfer.setData('text/plain',pos);};
+window.plBatDrop=function(e,toPos){
+  e.preventDefault();
+  var fromPos=parseInt(e.dataTransfer.getData('text/plain'));
+  if(fromPos===toPos)return;
+  var xi=PL.squad.slice(0,11).map(function(p,i){return{name:p,idx:i};}).filter(function(o){return o.name;});
+  var order=PL.battingOrder.filter(function(i){return PL.squad[i];}).map(function(i){return i;});
+  xi.forEach(function(o){if(order.indexOf(o.idx)<0)order.push(o.idx);});
+  var moved=order.splice(fromPos,1)[0];
+  order.splice(toPos,0,moved);
+  PL.battingOrder=order;
+  e.currentTarget.classList.remove('drag-over');
+  renderPlannerBatting();
+};
+
+// ── FIELDING TAB ──────────────────────────────────────────────────────────
+function renderPlannerFielding(){
+  var html='<div>';
+  // Preset tabs
+  html+='<div style="display:flex;flex-wrap:wrap;margin-bottom:14px">';
+  PLANNER_PRESET_NAMES.forEach(function(name,pi){
+    var label=pi===5?PL.customPresetName:name;
+    var count=PL.fieldActive[pi]?PL.fieldActive[pi].size:0;
+    var active=pi===PL.activePreset;
+    html+='<button class="preset-btn-pl'+(active?' active':'')+'" style="'+(active?'border-color:'+PLANNER_PRESET_COLORS[pi]+';color:'+PLANNER_PRESET_COLORS[pi]+';':'')+'" onclick="setPlannerPreset('+pi+')">';
+    html+=label+' <span style="font-size:10px;opacity:.7">('+count+')</span></button>';
+  });
+  html+='</div>';
+  html+='<p style="font-size:12px;color:var(--muted);margin-bottom:12px">Click dots on the field to activate positions (max '+MAX_FIELDERS_PL+'). 🔴 Bowler &amp; 🟡 Keeper are fixed.</p>';
+  html+='<div style="display:grid;grid-template-columns:1fr 260px;gap:16px">';
+  // SVG field
+  html+='<div style="max-width:440px;width:100%">';
+  html+=buildFieldSVGHtml();
+  html+='</div>';
+  // Legend + custom panel
+  html+='<div>';
+  html+='<div style="background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
+  html+='<div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Active Positions</div>';
+  var activeSet=PL.fieldActive[PL.activePreset]||new Set();
+  if(activeSet.size===0){
+    html+='<div style="font-size:12px;color:var(--muted)">Click dots on the map to activate.</div>';
+  } else {
+    PLANNER_FIELD_POSITIONS.filter(function(p){return activeSet.has(p.id);}).forEach(function(pos){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">';
+      html+='<div class="field-pos-dot-pl" style="background:'+PLANNER_PRESET_COLORS[PL.activePreset]+'"></div>';
+      html+='<span style="flex:1;color:var(--muted)">'+pos.label+'</span>';
+      if(PL.activePreset===5&&PL.customAssign[pos.id]!==undefined&&PL.squad[PL.customAssign[pos.id]]){
+        html+='<span style="color:'+PLANNER_PRESET_COLORS[5]+';font-size:10px;font-weight:600">'+PL.squad[PL.customAssign[pos.id]]+'</span>';
+      }
+      html+='</div>';
+    });
+  }
+  html+='</div>';
+  // Custom panel
+  if(PL.activePreset===5){
+    html+='<div style="background:var(--mid);border:1px solid var(--border);border-radius:10px;padding:14px">';
+    html+='<div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Custom — Assign Players</div>';
+    if(activeSet.size===0){
+      html+='<div style="font-size:12px;color:var(--muted)">Activate positions on the map first.</div>';
+    } else {
+      PLANNER_FIELD_POSITIONS.filter(function(p){return activeSet.has(p.id);}).forEach(function(pos){
+        var curIdx=PL.customAssign[pos.id];
+        var opts='<option value="">— assign —</option>';
+        PL.squad.slice(0,11).forEach(function(name,i){
+          if(!name) return;
+          opts+='<option value="'+i+'"'+(curIdx===i?' selected':'')+'>'+name+'</option>';
+        });
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">';
+        html+='<span style="font-size:11px;color:var(--muted);min-width:90px">'+pos.label+'</span>';
+        html+='<select style="flex:1;background:var(--mid);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 7px;outline:none" onchange="onPlannerCustomAssign(\''+pos.id+'\',+this.value)">'+opts+'</select>';
+        html+='</div>';
+      });
+    }
+    html+='</div>';
+  }
+  html+='</div></div>';
+  html+='<button class="save-section-btn" onclick="savePlannerSection(\'Fielding\')">💾 Save Fielding</button>';
+  html+='</div>';
+  document.getElementById('panel-planner-content').innerHTML=html;
+}
+
+function buildFieldSVGHtml(){
+  var activeSet=PL.fieldActive[PL.activePreset]||new Set();
+  var isFull=activeSet.size>=MAX_FIELDERS_PL;
+  var col=PLANNER_PRESET_COLORS[PL.activePreset];
+  var svg='<svg viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">';
+  svg+='<ellipse cx="220" cy="220" rx="210" ry="210" fill="#0b1a0e" stroke="#1e3a1e" stroke-width="1.5"/>';
+  svg+='<ellipse cx="220" cy="220" rx="128" ry="128" fill="none" stroke="#1e4a1e" stroke-width="1" stroke-dasharray="6,4"/>';
+  svg+='<rect x="207" y="168" width="26" height="104" rx="3" fill="#1a2a10" stroke="#3a5020" stroke-width="1"/>';
+  svg+='<line x1="203" y1="190" x2="237" y2="190" stroke="#5a7030" stroke-width="1.5"/>';
+  svg+='<line x1="203" y1="250" x2="237" y2="250" stroke="#5a7030" stroke-width="1.5"/>';
+  // Stumps
+  ['215','220','225'].forEach(function(x){
+    svg+='<line x1="'+x+'" y1="180" x2="'+x+'" y2="194" stroke="#c8a050" stroke-width="1.5"/>';
+    svg+='<line x1="'+x+'" y1="246" x2="'+x+'" y2="260" stroke="#c8a050" stroke-width="1.5"/>';
+  });
+  // Field positions
+  PLANNER_FIELD_POSITIONS.forEach(function(pos){
+    var isActive=activeSet.has(pos.id);
+    var isLocked=isFull&&!isActive;
+    var opacity=isLocked?'0.35':'1';
+    var cursor=isLocked?'not-allowed':'pointer';
+    var r=isActive?9:6;
+    var fill=isActive?col:'#2a3a4a';
+    var stroke=isActive?'#fff':'#3a5060';
+    svg+='<g style="cursor:'+cursor+';opacity:'+opacity+'" onclick="togglePlannerDot(\''+pos.id+'\')">';
+    svg+='<circle cx="'+pos.cx+'" cy="'+pos.cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(isActive?2:1)+'"/>';
+    svg+='<text x="'+pos.cx+'" y="'+(pos.cy+(isActive?22:18))+'" text-anchor="middle" fill="'+(isActive?col:'#4a6a8a')+'" font-size="'+(isActive?9:8)+'" font-family="Outfit,sans-serif" font-weight="'+(isActive?'bold':'normal')+'">';
+    svg+=pos.label+'</text></g>';
+  });
+  // Fixed bowler
+  svg+='<circle cx="220" cy="157" r="9" fill="#e05252" stroke="#fff" stroke-width="2"/>';
+  svg+='<text x="220" y="175" text-anchor="middle" fill="#e05252" font-size="8" font-family="Outfit,sans-serif" font-weight="bold">BWL</text>';
+  // Fixed keeper
+  svg+='<circle cx="220" cy="280" r="9" fill="#c8a84b" stroke="#fff" stroke-width="2"/>';
+  svg+='<text x="220" y="298" text-anchor="middle" fill="#c8a84b" font-size="8" font-family="Outfit,sans-serif" font-weight="bold">WK</text>';
+  // Counter
+  svg+='<text x="220" y="432" text-anchor="middle" fill="'+(isFull?'#e05252':'#7a8899')+'" font-size="11" font-family="Outfit,sans-serif" font-weight="bold">'+activeSet.size+' / '+MAX_FIELDERS_PL+' fielders'+(isFull?' — FULL':'')+'</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+window.setPlannerPreset=function(pi){
+  PL.activePreset=pi;
+  renderPlannerFielding();
+};
+window.togglePlannerDot=function(posId){
+  var activeSet=PL.fieldActive[PL.activePreset]||(PL.fieldActive[PL.activePreset]=new Set());
+  if(activeSet.has(posId)){
+    activeSet.delete(posId);
+    if(PL.activePreset===5) delete PL.customAssign[posId];
+  } else {
+    if(activeSet.size>=MAX_FIELDERS_PL){plannerToast('Max '+MAX_FIELDERS_PL+' fielders! Tap an active dot to remove one first.');return;}
+    activeSet.add(posId);
+  }
+  renderPlannerFielding();
+};
+window.onPlannerCustomAssign=function(posId,idx){
+  // Remove from other position if already assigned
+  Object.keys(PL.customAssign).forEach(function(k){if(PL.customAssign[k]===idx&&k!==posId)delete PL.customAssign[k];});
+  PL.customAssign[posId]=idx;
+  renderPlannerFielding();
+};
+
+// ── PLAYING 11 tab (visible to all) ──────────────────────────────────────
+function renderPlaying11(){
+  var upcomingMs = getUpcomingMatches();
+  var selDiv = document.getElementById('p11-match-selector');
+  var sel = document.getElementById('p11-match-select');
+  var content = document.getElementById('panel-p11-content');
+  if(!content) return;
+
+  if(upcomingMs.length===0){
+    if(selDiv) selDiv.style.display='none';
+    content.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">📅</div><div>No upcoming matches found.</div></div>';
+    return;
+  }
+
+  if(selDiv) selDiv.style.display='block';
+  if(sel){
+    var cur=sel.value;
+    sel.innerHTML='';
+    upcomingMs.forEach(function(u){
+      var opt=document.createElement('option');
+      opt.value=u.id;opt.textContent=u.label;
+      if(u.id===cur)opt.selected=true;
+      sel.appendChild(opt);
+    });
+    if(!cur) sel.value=upcomingMs[0].id;
+  }
+
+  var matchId=sel?sel.value:upcomingMs[0].id;
+  renderPlaying11ForMatch(matchId);
+}
+
+window.renderPlaying11=function(){
+  var sel=document.getElementById('p11-match-select');
+  var matchId=sel?sel.value:'';
+  if(matchId) renderPlaying11ForMatch(matchId);
+};
+
+function renderPlaying11ForMatch(matchId){
+  var content=document.getElementById('panel-p11-content');
+  if(!content)return;
+  if(!window.__db){showP11Locked(content);return;}
+  window.__fbGet(window.__fbRef(window.__db,'ss2026/playing11/'+matchId))
+    .then(function(snap){
+      if(!snap||!snap.exists()||!snap.val().published){
+        showP11Locked(content);
+      } else {
+        var data=snap.val();
+        showP11Published(content,data);
+      }
+    })
+    .catch(function(){showP11Locked(content);});
+}
+
+function showP11Locked(content){
+  content.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted)">'
+    +'<div style="font-size:48px;margin-bottom:12px">🔒</div>'
+    +'<div style="font-size:16px;font-weight:600;color:var(--soft);margin-bottom:8px">Playing 11 not yet announced</div>'
+    +'<div style="font-size:13px;color:var(--muted);max-width:280px;margin:0 auto">The captain will publish the squad before the match. Check back soon!</div>'
+    +'</div>';
+}
+
+function showP11Published(content,data){
+  var squad=data.squad||[];
+  var publishedAt=data.publishedAt?new Date(data.publishedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  var html='<div>';
+  html+='<div class="p11-banner"><span style="font-size:24px">📢</span><div>';
+  html+='<div style="font-size:14px;font-weight:700;color:var(--gold)">Playing 11 Announced!</div>';
+  html+='<div style="font-size:11px;color:var(--muted)">Published '+publishedAt+'</div>';
+  html+='</div></div>';
+  var xi=squad.slice(0,11);
+  var subs=squad.slice(11).filter(Boolean);
+  html+='<div style="margin-bottom:6px;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;font-weight:600">Playing XI</div>';
+  xi.forEach(function(name,i){
+    if(!name)return;
+    html+='<div class="p11-card"><span class="p11-num">'+(i+1)+'</span><span class="p11-name">'+name+'</span></div>';
+  });
+  if(subs.length>0){
+    html+='<div style="margin:14px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600">Substitutes</div>';
+    subs.forEach(function(name){
+      html+='<div class="p11-card"><span class="p11-num" style="color:var(--muted)">S</span><span class="p11-name">'+name+'</span><span class="p11-sub-tag">SUB</span></div>';
+    });
+  }
+  html+='</div>';
+  content.innerHTML=html;
+  // In-app banner notification
+  showP11Banner();
+}
+
+function showP11Banner(){
+  var existing=document.getElementById('p11-inapp-banner');
+  if(existing)return;
+  var banner=document.createElement('div');
+  banner.id='p11-inapp-banner';
+  banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--green2);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  banner.textContent='📢 Playing 11 announced! Tap to view';
+  banner.onclick=function(){switchTab('playing11',null);this.remove();};
+  document.body.appendChild(banner);
+  setTimeout(function(){if(banner.parentNode)banner.remove();},8000);
+}
+
+// ── PDF Export ────────────────────────────────────────────────────────────
+window.exportPlannerPDF=function(){
+  if(!PL.matchId){plannerToast('Select a match first');return;}
+  plannerToast('Generating PDF...');
+  var jsPDF=window.jspdf?window.jspdf.jsPDF:null;
+  if(!jsPDF){plannerToast('PDF library not loaded');return;}
+  var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  var W=210,M=14,y=14;
+  function sf(style,size,rgb){doc.setFont('helvetica',style||'normal');doc.setFontSize(size||10);doc.setTextColor(...(rgb||[232,237,242]));}
+  function rule(){doc.setDrawColor(50,65,70);doc.line(M,y,W-M,y);y+=4;}
+  function newPage(){doc.addPage();doc.setFillColor(13,17,23);doc.rect(0,0,W,297,'F');y=16;}
+  function chk(n){if(y+n>282)newPage();}
+  // Cover
+  doc.setFillColor(13,17,23);doc.rect(0,0,W,297,'F');
+  doc.setFillColor(20,30,22);doc.rect(0,85,W,50,'F');
+  sf('bold',28,[200,168,75]);doc.text('SCHWABEN SENTINELS',W/2,45,{align:'center'});
+  sf('bold',14,[200,210,220]);doc.text('MATCH PLAN',W/2,58,{align:'center'});
+  var ups=getUpcomingMatches();var um=ups.find(function(u){return u.id===PL.matchId;});
+  sf('normal',11,[180,190,200]);doc.text(um?um.label:'Match Plan',W/2,75,{align:'center'});
+  sf('normal',9,[80,100,110]);doc.text('Generated: '+new Date().toLocaleString(),W/2,285,{align:'center'});
+  // Squad
+  newPage();y=16;
+  sf('bold',14,[200,168,75]);doc.text('SQUAD',M,y);y+=5;rule();
+  PL.squad.forEach(function(name,i){
+    if(!name)return;chk(7);
+    var isSub=i>=11;
+    sf('bold',9,isSub?[120,130,140]:[200,168,75]);doc.text(isSub?'Sub '+(i-10):''+(i+1),M,y);
+    sf('normal',9,[232,237,242]);doc.text(name,M+12,y);y+=6;
+  });
+  // Batting
+  newPage();y=16;
+  sf('bold',14,[200,168,75]);doc.text('BATTING ORDER',M,y);y+=5;rule();
+  var xi=PL.squad.slice(0,11).map(function(p,i){return{name:p,idx:i};}).filter(function(o){return o.name;});
+  var order=PL.battingOrder.filter(function(i){return PL.squad[i];}).map(function(i){return{name:PL.squad[i],idx:i};});
+  xi.forEach(function(o){if(!order.find(function(x){return x.idx===o.idx;}))order.push(o);});
+  order.forEach(function(p,pos){
+    chk(7);sf('bold',9,[200,168,75]);doc.text(''+(pos+1)+'.',M,y);
+    sf('normal',9,[232,237,242]);doc.text(p.name,M+8,y);
+    var role=PL.battingRoles[p.idx];
+    if(role){sf('normal',9,[120,200,140]);doc.text(role,M+80,y);}
+    y+=7;
+  });
+  // Bowling
+  newPage();y=16;
+  sf('bold',14,[200,168,75]);doc.text('BOWLING ALLOCATION',M,y);y+=5;rule();
+  var bowlMap={};
+  Object.entries(PL.overAssignments).forEach(function(ent){
+    var o=ent[0],i=ent[1];
+    if(!bowlMap[i])bowlMap[i]={overs:[],pp:0};
+    bowlMap[i].overs.push(+o);if(+o<=10)bowlMap[i].pp++;
+  });
+  if(Object.keys(bowlMap).length===0){sf('normal',10,[120,140,150]);doc.text('No overs assigned.',M,y);y+=8;}
+  else {
+    Object.entries(bowlMap).sort(function(a,b){return b[1].overs.length-a[1].overs.length;}).forEach(function(ent){
+      var i=ent[0],d=ent[1];chk(14);
+      var col=hexToRgbPl(PLANNER_BOWLER_COLORS[+i%PLANNER_BOWLER_COLORS.length]);
+      sf('bold',10,col);doc.text(PL.squad[+i]||'?',M,y);
+      sf('normal',10,[240,192,64]);doc.text(d.overs.length+' overs'+(d.pp?' ('+d.pp+' PP)':''),M+70,y);y+=5;
+      var sorted=d.overs.sort(function(a,b){return a-b;}).join(', ');
+      sf('normal',8,[100,130,100]);
+      var lines=doc.splitTextToSize(sorted,W-M*2-10);
+      lines.forEach(function(l){doc.text(l,M+4,y);y+=4;});y+=2;
+    });
+  }
+  // Fielding
+  PLANNER_PRESET_NAMES.forEach(function(pname,pi){
+    newPage();y=16;
+    var pLabel=pi===5?PL.customPresetName:pname;
+    var pcol=hexToRgbPl(PLANNER_PRESET_COLORS[pi]);
+    sf('bold',14,pcol);doc.text('FIELDING: '+pLabel.toUpperCase(),M,y);y+=5;rule();
+    var aSet=PL.fieldActive[pi]||new Set();
+    if(aSet.size===0){sf('normal',10,[120,140,150]);doc.text('Not configured.',M,y);y+=8;}
+    else {
+      PLANNER_FIELD_POSITIONS.filter(function(p){return aSet.has(p.id);}).forEach(function(pos){
+        chk(7);sf('bold',9,[180,190,200]);doc.text(pos.label,M,y);
+        if(pi===5&&PL.customAssign[pos.id]!==undefined&&PL.squad[PL.customAssign[pos.id]]){
+          sf('normal',9,pcol);doc.text(PL.squad[PL.customAssign[pos.id]],M+55,y);
+        } else {sf('normal',9,pcol);doc.text('●',M+55,y);}
+        y+=6;
+      });
+    }
+  });
+  var pdfBlob=doc.output('blob');
+  var blobUrl=URL.createObjectURL(pdfBlob);
+  window.open(blobUrl,'_blank');
+  plannerToast('PDF opened in new tab! 📄');
+};
+
+function hexToRgbPl(hex){return[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];}
+function plannerShortName(n){if(!n)return'';var p=n.trim().split(' ');return p.length===1?p[0].slice(0,8):p[0][0]+'.'+p[p.length-1].slice(0,7);}
+
+// ── On Firebase load, show P11 banner if published for upcoming matches ──
+function checkForPublishedP11(){
+  if(!window.__db) return;
+  var upcoming=getUpcomingMatches();
+  upcoming.slice(0,3).forEach(function(u){
+    window.__fbGet(window.__fbRef(window.__db,'ss2026/playing11/'+u.id))
+      .then(function(snap){
+        if(snap&&snap.exists()&&snap.val().published) showP11Banner();
+      }).catch(function(){});
+  });
+}
+setTimeout(checkForPublishedP11, 3000);
+
 </script>
-</body>
-</html>
