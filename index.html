@@ -1231,7 +1231,7 @@ textarea.form-input{resize:vertical;min-height:80px}
 
       <!-- Quick start card -->
       <div style="background:var(--deep);border:2px solid var(--gold);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center">
-        <div style="margin-bottom:8px"><img id="help-logo" style="width:64px;height:64px;border-radius:50%;border:2px solid var(--gold);object-fit:cover" onerror="this.style.display='none'" /></div>
+        <div style="margin-bottom:8px"><img id="help-logo" style="width:64px;height:64px;border-radius:50%;border:2px solid var(--gold);object-fit:cover" onerror="this.style.display=\x27none\x27" /></div>
         <div style="font-family:Bebas Neue,cursive;font-size:20px;letter-spacing:2px;color:var(--gold);margin-bottom:4px">Schwaben Sentinels</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Player Availability App</div>
         <div style="font-size:11px;color:var(--green2);font-family:JetBrains Mono,monospace">schwabensentinelstsv1897-alt.github.io/Schwaben-sentinels/</div>
@@ -8687,7 +8687,7 @@ function showP11Published(content,data){
   // Team logo header
   html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px 16px;background:var(--mid);border:1px solid var(--border);border-radius:14px">';
   if(logoUrl){
-    html+='<img src="'+logoUrl+'" alt="Club Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(200,168,75,.4);flex-shrink:0" onerror="this.style.display='none'">';
+    html+='<img src="'+logoUrl+'" alt="Club Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(200,168,75,.4);flex-shrink:0" onerror="this.style.display=\'none\'">';
   } else {
     html+='<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-family:Bebas Neue,cursive;font-size:18px;color:var(--dark);flex-shrink:0">SS</div>';
   }
